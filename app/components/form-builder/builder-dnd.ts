@@ -69,9 +69,10 @@ export function normalizeBuilderFields(
   columns: FormBuilderConfig["columns"],
 ) {
   const occupied = new Set<string>();
-  return sortBuilderFields(fields).map((field) => {
+  return fields.map((field) => {
     const normalized = {
       ...field,
+      widthMode: field.widthMode ?? "auto",
       width:
         field.widthMode === "manual" ? field.width : autoFieldWidth(columns),
     };
@@ -163,7 +164,7 @@ export function moveBuilderField(
       withoutActive.length,
       withoutActive.findIndex(
         (field) =>
-          field.row > row || (field.row === row && field.column > column),
+          field.row > row || (field.row === row && field.column >= column),
       ),
     );
     const safeIndex =

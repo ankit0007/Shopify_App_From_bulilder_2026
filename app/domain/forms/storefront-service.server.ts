@@ -361,6 +361,7 @@ export function toPublicForm(form: PublishedForm): PublicForm {
       row: field.row,
       column: field.column,
       width: field.width,
+      widthMode: field.widthMode ?? "auto",
       options: field.options,
       validation: field.validation,
     })),

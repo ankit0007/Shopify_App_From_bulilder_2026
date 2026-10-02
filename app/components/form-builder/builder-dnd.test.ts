@@ -5,6 +5,7 @@ import type {
 } from "../../domain/forms/builder-schema";
 import {
   moveBuilderField,
+  normalizeBuilderConfigForColumns,
   nextLibraryFieldPlacement,
   sortBuilderFields,
 } from "./builder-dnd";
@@ -77,7 +78,13 @@ describe("builder drag placement", () => {
     );
     expect(result?.fields.map((item) => item.id)).toEqual(["email", "text"]);
     expect(result?.fields[0]).toEqual(
-      expect.objectContaining({ id: "email", row: 1, column: 1, width: 4 }),
+      expect.objectContaining({
+        id: "email",
+        row: 1,
+        column: 1,
+        width: 6,
+        widthMode: "auto",
+      }),
     );
   });
 
@@ -103,5 +110,68 @@ describe("builder drag placement", () => {
       row: 2,
       column: 1,
     });
+  });
+
+  it.each([
+    [1, 12],
+    [2, 6],
+    [3, 4],
+  ] as const)("normalizes moved fields for %s columns", (columns, width) => {
+    const result = moveBuilderField(
+      { ...config(field("text", 1, 1, 12)), columns },
+      "text",
+      `canvas-cell:1:${columns}`,
+      "before",
+    );
+    expect(result?.fields[0]).toEqual(
+      expect.objectContaining({
+        row: 1,
+        column: columns,
+        width,
+        widthMode: "auto",
+      }),
+    );
+  });
+
+  it("reflows collisions without overlapping fields", () => {
+    const result = moveBuilderField(
+      {
+        ...config(
+          field("first", 1, 1, 4),
+          field("second", 1, 2, 4),
+          field("third", 1, 3, 4),
+        ),
+        columns: 3,
+      },
+      "third",
+      "canvas-cell:1:1",
+      "before",
+    );
+    expect(
+      result?.fields.map(({ id, row, column, width }) => ({
+        id,
+        row,
+        column,
+        width,
+      })),
+    ).toEqual([
+      { id: "third", row: 1, column: 1, width: 4 },
+      { id: "first", row: 1, column: 2, width: 4 },
+      { id: "second", row: 1, column: 3, width: 4 },
+    ]);
+  });
+
+  it("normalizes auto fields when the column count changes", () => {
+    const result = normalizeBuilderConfigForColumns(
+      { ...config(field("text", 1, 1, 12)), columns: 1 },
+      3,
+    );
+    expect(result.fields[0]).toEqual(
+      expect.objectContaining({
+        column: 1,
+        width: 4,
+        widthMode: "auto",
+      }),
+    );
   });
 });
