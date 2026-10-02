@@ -5,6 +5,12 @@ name = "App_From_bulilder_2026"
 application_url = "https://formbuilder.it3.in"
 embedded = true
 
+[build]
+# Dev-store only. `shopify app dev` points this store at the local app.
+# It does not change the app for other stores, and it is not a production deploy.
+automatically_update_urls_on_dev = true
+dev_store_url = "form-builder-dev.myshopify.com"
+
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
 scopes = ""
