@@ -11,7 +11,7 @@
     <p class="formbuilder-loading">{{ block.settings.loading_text | escape }}</p>
   {% endif %}
 </div>
-{{ 'form-builder.js' | asset_url | script_tag }}
+<script src="{{ 'form-builder.js' | asset_url }}" defer></script>
 {{ 'form-builder.css' | asset_url | stylesheet_tag }}
 
 {% schema %}

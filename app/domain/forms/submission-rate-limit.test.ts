@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { DevelopmentSubmissionRateLimiter } from "./submission-rate-limit.server";
+import {
+  DevelopmentSubmissionRateLimiter,
+  RedisSubmissionRateLimiter,
+} from "./submission-rate-limit.server";
 
 describe("development submission rate limiter", () => {
   it("limits a key within its configured window and allows it after expiry", () => {
@@ -13,5 +16,19 @@ describe("development submission rate limiter", () => {
 
     now += 1_001;
     expect(limiter.allow("shop-a:ip-a")).toBe(true);
+  });
+});
+
+describe("redis submission rate limiter", () => {
+  it("allows requests until the shared counter reaches the limit", async () => {
+    let count = 0;
+    const limiter = new RedisSubmissionRateLimiter(async () => {
+      count += 1;
+      return count;
+    }, 2);
+
+    await expect(limiter.allow("shop-a:ip-a")).resolves.toBe(true);
+    await expect(limiter.allow("shop-a:ip-a")).resolves.toBe(true);
+    await expect(limiter.allow("shop-a:ip-a")).resolves.toBe(false);
   });
 });

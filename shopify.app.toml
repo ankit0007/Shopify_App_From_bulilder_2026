@@ -13,7 +13,7 @@ dev_store_url = "form-builder-dev.myshopify.com"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = ""
+scopes = "write_app_proxy"
 optional_scopes = [ ]
 use_legacy_install_flow = false
 
@@ -38,4 +38,4 @@ api_version = "2026-10"
   compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
 
 [auth]
-redirect_urls = [ ]
+redirect_urls = [ "https://formbuilder.it3.in/auth/callback" ]

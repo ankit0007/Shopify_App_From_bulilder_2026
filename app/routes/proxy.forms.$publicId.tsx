@@ -7,7 +7,10 @@ import {
   STOREFRONT_MAX_SUBMISSION_BYTES,
   toPublicForm,
 } from "../domain/forms/storefront-service.server";
-import { getSubmissionRateLimiter } from "../domain/forms/submission-rate-limit.server";
+import {
+  getSubmissionRateLimiter,
+  RateLimitUnavailableError,
+} from "../domain/forms/submission-rate-limit.server";
 
 async function resolveShopId(shopDomain: string) {
   const shop = await db.shop.findUnique({
@@ -93,8 +96,18 @@ export async function action({ request, params }: ActionFunctionArgs) {
       request.headers.get("cf-connecting-ip") ??
       request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
       "unknown";
-    if (limiter && !limiter.allow(`${shopId}:${ip}`)) {
-      return jsonError("Please wait before submitting again.", 429);
+    if (limiter) {
+      try {
+        const allowed = await limiter.allow(`${shopId}:${ip}`);
+        if (!allowed) {
+          return jsonError("Please wait before submitting again.", 429);
+        }
+      } catch (error) {
+        if (error instanceof RateLimitUnavailableError) {
+          return jsonError("Please wait before submitting again.", 503);
+        }
+        throw error;
+      }
     }
     const body = await readJsonBody(request);
     const result = await createSubmission(db, {

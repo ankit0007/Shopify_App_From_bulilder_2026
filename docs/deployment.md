@@ -39,6 +39,7 @@ The following values belong only in the server environment, never in Git:
 - Shopify API key and API secret
 - `SHOPIFY_APP_URL=https://formbuilder.it3.in`
 - PostgreSQL `DATABASE_URL`
+- Redis `REDIS_URL` for the production submission rate limiter
 - Shopify app client ID and scopes
 - Any storage, email, or integration credentials added in later phases
 
