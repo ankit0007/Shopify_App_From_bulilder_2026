@@ -1,5 +1,7 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 import {
+  DEFAULT_FORM_SETTINGS,
+  DEFAULT_STYLE_TOKENS,
   type BuilderField,
   type FormBuilderConfig,
   validateBuilderConfig,
@@ -88,15 +90,24 @@ function dataToConfig(version: {
     validation: Prisma.JsonValue | null;
   }>;
 }): FormBuilderConfig {
-  const settings = (version.settings ?? {}) as FormBuilderConfig["settings"];
-  const style = (version.style.tokens ?? {}) as FormBuilderConfig["style"];
+  const settings = {
+    ...DEFAULT_FORM_SETTINGS,
+    ...((version.settings ?? {}) as Partial<FormBuilderConfig["settings"]>),
+  };
+  const style = {
+    ...DEFAULT_STYLE_TOKENS,
+    ...((version.style.tokens ?? {}) as Partial<FormBuilderConfig["style"]>),
+  };
 
   return {
     columns: Math.min(3, Math.max(1, version.layout.columns)) as 1 | 2 | 3,
     settings,
     style,
     fields: version.fields.map((field) => {
-      const configuration = (field.configuration ?? {}) as Record<string, unknown>;
+      const configuration = (field.configuration ?? {}) as Record<
+        string,
+        unknown
+      >;
       return {
         id: field.key || field.id,
         type: DB_TYPE_TO_FIELD[field.type] ?? "text",
@@ -150,7 +161,12 @@ export async function loadBuilderForm(
 
 export async function saveBuilderDraft(
   db: PrismaClient,
-  input: { shopId: string; formId: string; config: FormBuilderConfig; name?: string },
+  input: {
+    shopId: string;
+    formId: string;
+    config: FormBuilderConfig;
+    name?: string;
+  },
 ) {
   const issues = validateBuilderConfig(input.config);
   if (issues.length) {
@@ -171,11 +187,16 @@ export async function saveBuilderDraft(
     });
 
     if (!form || !form.versions[0]) {
-      return { ok: false as const, issues: [{ path: "form", message: "Form not found." }] };
+      return {
+        ok: false as const,
+        issues: [{ path: "form", message: "Form not found." }],
+      };
     }
 
     const current = form.versions[0];
-    const nextVersion = current.isPublished ? form.currentVersion + 1 : form.currentVersion;
+    const nextVersion = current.isPublished
+      ? form.currentVersion + 1
+      : form.currentVersion;
     let versionId = current.id;
 
     if (current.isPublished) {
@@ -229,7 +250,10 @@ export async function publishBuilderForm(
 ) {
   const loaded = await loadBuilderForm(db, input);
   if (!loaded) {
-    return { ok: false as const, issues: [{ path: "form", message: "Form not found." }] };
+    return {
+      ok: false as const,
+      issues: [{ path: "form", message: "Form not found." }],
+    };
   }
 
   const issues = validateBuilderConfig(loaded.config, { forPublish: true });

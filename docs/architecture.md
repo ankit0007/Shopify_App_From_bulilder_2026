@@ -23,6 +23,24 @@ Names, titles, versions, styles, and display rules can change without changing
 `publicId`. Duplication calls the creation path and receives a new public ID.
 Shortcode resolution is tenant-scoped and only returns `PUBLISHED` forms.
 
+## Phase 2 builder contract
+
+The admin builder uses one normalized `FormBuilderConfig` for editing and
+preview. Supported field types are text, textarea, email, phone, number, URL,
+password, date, time, datetime, select, multi-select, radio, checkbox, yes/no,
+and hidden. Each field has a stable key, safe submission name, row, column,
+width, options, and validation configuration.
+
+Explicit saves update the current draft version. If the current version is
+already published, the save creates the next draft version first. Publishing
+validates the draft, marks exactly one version as published, records
+`Form.publishedVersion`, and changes the form status to `PUBLISHED`. This keeps
+incomplete edits away from the future storefront renderer.
+
+The builder UI is split into a field library, sortable canvas, and settings
+panel. `@dnd-kit` supplies pointer and keyboard sorting primitives. Desktop,
+tablet, and mobile preview modes use the same normalized configuration.
+
 ## Storefront placement
 
 The Phase 1 contract uses a Theme App Extension app block for inline placement.

@@ -104,15 +104,24 @@ export function validateBuilderConfig(
   const forPublish = options.forPublish ?? false;
 
   if (![1, 2, 3].includes(config.columns)) {
-    issues.push({ path: "columns", message: "Choose one, two, or three columns." });
+    issues.push({
+      path: "columns",
+      message: "Choose one, two, or three columns.",
+    });
   }
 
   if (!config.settings.submitLabel.trim()) {
-    issues.push({ path: "settings.submitLabel", message: "Submit button text is required." });
+    issues.push({
+      path: "settings.submitLabel",
+      message: "Submit button text is required.",
+    });
   }
 
   if (forPublish && !config.fields.length) {
-    issues.push({ path: "fields", message: "Add at least one field before publishing." });
+    issues.push({
+      path: "fields",
+      message: "Add at least one field before publishing.",
+    });
   }
 
   for (const [index, field] of config.fields.entries()) {
@@ -125,28 +134,49 @@ export function validateBuilderConfig(
     }
 
     if (names.has(field.name)) {
-      issues.push({ path: `${path}.name`, message: "Field names must be unique." });
+      issues.push({
+        path: `${path}.name`,
+        message: "Field names must be unique.",
+      });
     }
     names.add(field.name);
 
     if (!field.label.trim()) {
-      issues.push({ path: `${path}.label`, message: "A field label is required." });
+      issues.push({
+        path: `${path}.label`,
+        message: "A field label is required.",
+      });
     }
 
     if (!ALLOWED_WIDTHS.includes(field.width)) {
-      issues.push({ path: `${path}.width`, message: "Choose a supported field width." });
+      issues.push({
+        path: `${path}.width`,
+        message: "Choose a supported field width.",
+      });
     }
 
     if (field.column < 1 || field.column > config.columns) {
-      issues.push({ path: `${path}.column`, message: "Field column is outside the form layout." });
+      issues.push({
+        path: `${path}.column`,
+        message: "Field column is outside the form layout.",
+      });
     }
 
     if (field.row < 1) {
-      issues.push({ path: `${path}.row`, message: "Field row must be positive." });
+      issues.push({
+        path: `${path}.row`,
+        message: "Field row must be positive.",
+      });
     }
 
-    if (field.validation.minLength !== undefined && field.validation.minLength < 0) {
-      issues.push({ path: `${path}.validation.minLength`, message: "Minimum length cannot be negative." });
+    if (
+      field.validation.minLength !== undefined &&
+      field.validation.minLength < 0
+    ) {
+      issues.push({
+        path: `${path}.validation.minLength`,
+        message: "Minimum length cannot be negative.",
+      });
     }
 
     if (
@@ -165,7 +195,10 @@ export function validateBuilderConfig(
       ["select", "multiselect", "radio", "checkbox"].includes(field.type) &&
       field.options.length === 0
     ) {
-      issues.push({ path: `${path}.options`, message: "Add at least one option." });
+      issues.push({
+        path: `${path}.options`,
+        message: "Add at least one option.",
+      });
     }
 
     if (field.validation.pattern) {

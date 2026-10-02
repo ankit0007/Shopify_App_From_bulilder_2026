@@ -1,4 +1,5 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
+import { DEFAULT_FORM_SETTINGS, DEFAULT_STYLE_TOKENS } from "./builder-schema";
 import { newFormPublicId } from "./ids";
 import { createFormShortcode } from "./shortcode";
 
@@ -24,9 +25,9 @@ export async function createForm(
       versions: {
         create: {
           version: 1,
-          settings: {},
+          settings: DEFAULT_FORM_SETTINGS,
           layout: { create: { columns: 1 } },
-          style: { create: { tokens: {} } },
+          style: { create: { tokens: DEFAULT_STYLE_TOKENS } },
         },
       },
     },

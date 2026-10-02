@@ -56,7 +56,10 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
   if (intent === "save" || intent === "publish") {
     if (!payload.config) {
-      return { ok: false, issues: [{ path: "config", message: "Form configuration is missing." }] };
+      return {
+        ok: false,
+        issues: [{ path: "config", message: "Form configuration is missing." }],
+      };
     }
     const saved = await saveBuilderDraft(db, {
       shopId: shop.id,
@@ -72,7 +75,13 @@ export async function action({ request, params }: ActionFunctionArgs) {
   }
 
   if (intent === "disable") {
-    return { ok: await setBuilderFormStatus(db, { shopId: shop.id, formId, status: "DISABLED" }) };
+    return {
+      ok: await setBuilderFormStatus(db, {
+        shopId: shop.id,
+        formId,
+        status: "DISABLED",
+      }),
+    };
   }
 
   if (intent === "duplicate") {
@@ -94,7 +103,13 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
 export default function FormBuilderRoute() {
   const data = useLoaderData<typeof loader>();
-  return <BuilderShell form={data.form} initialConfig={data.config} shortcode={data.shortcode} />;
+  return (
+    <BuilderShell
+      form={data.form}
+      initialConfig={data.config}
+      shortcode={data.shortcode}
+    />
+  );
 }
 
 export function ErrorBoundary() {

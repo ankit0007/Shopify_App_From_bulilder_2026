@@ -1,5 +1,9 @@
 import { useDraggable } from "@dnd-kit/core";
-import { FIELD_GROUPS, FIELD_REGISTRY, type BuilderFieldType } from "../../domain/forms/field-registry";
+import {
+  FIELD_GROUPS,
+  FIELD_REGISTRY,
+  type BuilderFieldType,
+} from "../../domain/forms/field-registry";
 
 function LibraryItem({ type }: { type: BuilderFieldType }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -22,8 +26,12 @@ function LibraryItem({ type }: { type: BuilderFieldType }) {
         {definition.label.slice(0, 2).toUpperCase()}
       </span>
       <span>
-        <span className="block font-medium text-slate-800">{definition.label}</span>
-        <span className="block text-xs text-slate-400">{definition.description}</span>
+        <span className="block font-medium text-slate-800">
+          {definition.label}
+        </span>
+        <span className="block text-xs text-slate-400">
+          {definition.description}
+        </span>
       </span>
     </button>
   );
@@ -36,12 +44,16 @@ export function FieldLibrary() {
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
           Field library
         </p>
-        <p className="mt-2 text-sm text-slate-500">Drag a field into your form.</p>
+        <p className="mt-2 text-sm text-slate-500">
+          Drag a field into your form.
+        </p>
       </div>
       <div className="space-y-4">
         {FIELD_GROUPS.map((group) => (
           <section key={group.label}>
-            <h2 className="mb-1 px-3 text-xs font-semibold text-slate-500">{group.label}</h2>
+            <h2 className="mb-1 px-3 text-xs font-semibold text-slate-500">
+              {group.label}
+            </h2>
             <div className="space-y-0.5">
               {group.types.map((type) => (
                 <LibraryItem key={type} type={type} />

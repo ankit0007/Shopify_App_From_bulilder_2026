@@ -56,7 +56,20 @@ Every form has an opaque, immutable `publicId`. The shortcode is generated only 
 
 The ID survives renames and configuration changes. Duplicating or recreating a form produces a new ID. Resolution is scoped by authenticated shop and only published forms render.
 
-## Phase 1 scope
+## Phase 2 scope
+
+The premium builder now supports form creation, field library drag-and-drop,
+one/two/three-column layouts, responsive preview modes, field/form/style
+settings, draft saves, explicit publishing, disabling, duplication, deletion,
+and immutable shortcode copying. Supported fields are text, textarea, email,
+phone, number, URL, password, date, time, datetime, select, multi-select,
+radio, checkbox, yes/no, and hidden.
+
+Publishing is explicit and server-validated. Edits after publishing are stored
+in a new draft version, so incomplete work cannot change the published
+configuration.
+
+## Phase 1 foundation
 
 Included: official Shopify app foundation, PostgreSQL Prisma schema, tenant relationships, form/version/layout/style entities, placement model, submission/file/notification/integration/billing/audit entities, mandatory compliance webhook endpoint, Theme App Extension block contract, admin navigation shell, and identity/isolation tests.
 

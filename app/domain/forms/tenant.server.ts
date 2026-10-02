@@ -1,9 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 
-export async function getOrCreateShop(
-  db: PrismaClient,
-  shopDomain: string,
-) {
+export async function getOrCreateShop(db: PrismaClient, shopDomain: string) {
   return db.shop.upsert({
     where: { shopDomain },
     create: { shopDomain },

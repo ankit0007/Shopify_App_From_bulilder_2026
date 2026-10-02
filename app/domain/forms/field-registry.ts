@@ -186,7 +186,14 @@ export const FIELD_REGISTRY: Record<BuilderFieldType, FieldDefinition> = {
 export const FIELD_GROUPS = [
   {
     label: "Basic",
-    types: ["text", "textarea", "email", "phone", "number", "url"] as BuilderFieldType[],
+    types: [
+      "text",
+      "textarea",
+      "email",
+      "phone",
+      "number",
+      "url",
+    ] as BuilderFieldType[],
   },
   {
     label: "Date & time",
@@ -194,7 +201,13 @@ export const FIELD_GROUPS = [
   },
   {
     label: "Choices",
-    types: ["select", "multiselect", "radio", "checkbox", "yes_no"] as BuilderFieldType[],
+    types: [
+      "select",
+      "multiselect",
+      "radio",
+      "checkbox",
+      "yes_no",
+    ] as BuilderFieldType[],
   },
   {
     label: "Advanced",
