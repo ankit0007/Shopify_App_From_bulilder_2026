@@ -4,14 +4,16 @@
   Rendering and submission transport are implemented in the storefront phase.
 {% endcomment %}
 <div
-  class="form-builder-root"
+  class="formbuilder-block"
   data-form-builder-form-id="{{ block.settings.form_public_id | escape }}"
-  data-form-builder-status="pending"
+  data-form-builder-endpoint="/apps/form-builder/forms"
   role="region"
   aria-label="{{ block.settings.accessible_label | escape }}"
 >
-  <p>{{ block.settings.placeholder_text | escape }}</p>
+  <p class="formbuilder-loading">{{ block.settings.loading_text | escape }}</p>
 </div>
+{{ 'form-builder.js' | asset_url | script_tag }}
+{{ 'form-builder.css' | asset_url | stylesheet_tag }}
 
 {% schema %}
 {
@@ -32,9 +34,9 @@
     },
     {
       "type": "text",
-      "id": "placeholder_text",
+      "id": "loading_text",
       "label": "Loading text",
-      "default": "This form will load here."
+      "default": "Loading form…"
     }
   ]
 }

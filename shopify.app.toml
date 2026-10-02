@@ -5,6 +5,11 @@ client_id = ""
 # Keep this list minimal. Add scopes only when a feature has shipped.
 scopes = ""
 
+[app_proxy]
+url = "https://formbuilder.it3.in/proxy"
+prefix = "apps"
+subpath = "form-builder"
+
 [webhooks]
 api_version = "2026-10"
 

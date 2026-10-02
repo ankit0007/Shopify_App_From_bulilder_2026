@@ -1,0 +1,124 @@
+.formbuilder-block {
+  --formbuilder-radius-none: 0;
+  --formbuilder-radius-sm: 0.25rem;
+  --formbuilder-radius-md: 0.5rem;
+  --formbuilder-radius-lg: 0.75rem;
+  color: var(--formbuilder-text, inherit);
+  background: var(--formbuilder-background, transparent);
+  font-family: var(--formbuilder-font-family, inherit);
+  max-width: 100%;
+  padding: 1rem;
+}
+
+.formbuilder-form {
+  box-sizing: border-box;
+  margin: 0 auto;
+  max-width: 48rem;
+}
+
+.formbuilder-fields {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.formbuilder-field {
+  min-width: 0;
+}
+
+.formbuilder-label,
+.formbuilder-description {
+  display: block;
+}
+
+.formbuilder-label {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+}
+
+.formbuilder-description {
+  color: color-mix(in srgb, currentColor 68%, transparent);
+  font-size: 0.8125rem;
+  margin-bottom: 0.4rem;
+}
+
+.formbuilder-required {
+  color: #b42318;
+}
+
+.formbuilder-control {
+  background: var(--formbuilder-input-background, #fff);
+  border: var(--formbuilder-border-width, 1px) solid var(--formbuilder-border, #cbd5e1);
+  border-radius: var(--formbuilder-radius, 0.5rem);
+  box-sizing: border-box;
+  color: inherit;
+  font: inherit;
+  min-height: 2.75rem;
+  padding: 0.65rem 0.75rem;
+  width: 100%;
+}
+
+textarea.formbuilder-control {
+  min-height: 7rem;
+  resize: vertical;
+}
+
+.formbuilder-control:focus-visible,
+.formbuilder-choice input:focus-visible,
+.formbuilder-submit:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.formbuilder-choice-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  padding-top: 0.35rem;
+}
+
+.formbuilder-choice {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.45rem;
+}
+
+.formbuilder-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.formbuilder-submit {
+  background: var(--formbuilder-button-background, #0f172a);
+  border: 0;
+  border-radius: var(--formbuilder-button-radius, 0.5rem);
+  color: var(--formbuilder-button-text, #fff);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  padding: 0.7rem 1.15rem;
+}
+
+.formbuilder-submit:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.formbuilder-messages,
+.formbuilder-error {
+  font-size: 0.875rem;
+}
+
+.formbuilder-error {
+  color: #b42318;
+}
+
+@media (max-width: 40rem) {
+  .formbuilder-field {
+    grid-column: 1 / -1 !important;
+  }
+}
