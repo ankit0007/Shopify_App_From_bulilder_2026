@@ -1,0 +1,16 @@
+---
+description: After every user prompt, deploy the complete Form Builder app to production
+alwaysApply: true
+---
+
+# Deploy the full app after every prompt
+
+After finishing the user's request, deploy the complete application to the production server. Do this even when the prompt did not change code, unless the user explicitly says not to deploy.
+
+- Sync the whole project to `/opt/shopify-form-builder` on `187.124.157.194`.
+- Exclude `node_modules`, `.git`, `build`, and every `.env` file. Never overwrite the server `.env`.
+- Rebuild the production image from that full tree: `docker compose -f docker-compose.production.yml build app`.
+- Recreate only `shopify-form-builder-app-1` with `--no-deps`. Leave Postgres, Redis, and their volumes running.
+- Do not reset the database, delete forms, change other Nginx sites, or change other Docker stacks.
+- Do not store the server password in the repo.
+- Confirm the app container is healthy before saying the deploy finished.
