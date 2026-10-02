@@ -1,6 +1,15 @@
 (function () {
   "use strict";
 
+  if (window.__formBuilderStorefront) return;
+  window.__formBuilderStorefront = true;
+
+  var SHORTCODE_PATTERN = /\[form:([A-Za-z0-9_-]+)\]/g;
+  var PROXY_ENDPOINT = "/apps/form-builder/forms";
+  var formRequests = {};
+  var instanceCount = 0;
+  var scanScheduled = false;
+
   function element(tag, className) {
     var node = document.createElement(tag);
     if (className) node.className = className;
@@ -271,7 +280,10 @@
       fetch(root.dataset.formBuilderEndpoint + "/" + encodeURIComponent(root.dataset.formBuilderFormId), {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ values: collectValues(form) }),
+        body: JSON.stringify({
+          values: collectValues(form),
+          source: root.dataset.formBuilderShortcode === "true" ? "shortcode" : "theme_app_block",
+        }),
       })
         .then(function (response) {
           return response.json().then(function (body) {
@@ -294,26 +306,129 @@
     root.appendChild(form);
   }
 
-  document.querySelectorAll("[data-form-builder-form-id]").forEach(function (root, index) {
+  function loadForm(endpoint, publicId) {
+    var key = endpoint + "\n" + publicId;
+    if (!formRequests[key]) {
+      formRequests[key] = fetch(endpoint + "/" + encodeURIComponent(publicId), {
+        headers: { Accept: "application/json" },
+      })
+        .then(function (response) {
+          if (!response.ok) throw new Error("unavailable");
+          return response.json();
+        })
+        .then(function (payload) {
+          if (!payload.ok || !payload.form) throw new Error("unavailable");
+          return payload;
+        });
+    }
+    return formRequests[key];
+  }
+
+  function mount(root) {
     if (root.dataset.formBuilderInitialized === "true") return;
-    root.dataset.formBuilderInitialized = "true";
-    root.dataset.formBuilderInstance = String(index);
     var endpoint = root.dataset.formBuilderEndpoint;
     var publicId = root.dataset.formBuilderFormId;
     if (!endpoint || !publicId) return;
-    fetch(endpoint + "/" + encodeURIComponent(publicId), {
-      headers: { Accept: "application/json" },
-    })
-      .then(function (response) {
-        if (!response.ok) throw new Error("not found");
-        return response.json();
-      })
+    root.dataset.formBuilderInitialized = "true";
+    root.dataset.formBuilderInstance = String(instanceCount++);
+    loadForm(endpoint, publicId)
       .then(function (payload) {
-        if (!payload.ok || !payload.form) throw new Error("not found");
         renderBlock(root, payload);
       })
       .catch(function () {
         renderError(root, "This form is currently unavailable.");
       });
-  });
+  }
+
+  function createShortcodeHost(publicId) {
+    var host = element("div", "formbuilder-block");
+    host.dataset.formBuilderFormId = publicId;
+    host.dataset.formBuilderEndpoint = PROXY_ENDPOINT;
+    host.dataset.formBuilderShortcode = "true";
+    host.setAttribute("role", "region");
+    host.setAttribute("aria-label", "Form");
+    var loading = element("p", "formbuilder-loading");
+    loading.textContent = "Loading form…";
+    host.appendChild(loading);
+    return host;
+  }
+
+  function replaceShortcodes(textNode) {
+    var value = textNode.nodeValue || "";
+    SHORTCODE_PATTERN.lastIndex = 0;
+    if (!SHORTCODE_PATTERN.test(value)) return;
+    SHORTCODE_PATTERN.lastIndex = 0;
+    var parent = textNode.parentNode;
+    if (!parent) return;
+    var fragment = document.createDocumentFragment();
+    var cursor = 0;
+    var match;
+    while ((match = SHORTCODE_PATTERN.exec(value))) {
+      if (match.index > cursor) {
+        fragment.appendChild(document.createTextNode(value.slice(cursor, match.index)));
+      }
+      fragment.appendChild(createShortcodeHost(match[1]));
+      cursor = match.index + match[0].length;
+    }
+    if (cursor < value.length) {
+      fragment.appendChild(document.createTextNode(value.slice(cursor)));
+    }
+    parent.replaceChild(fragment, textNode);
+  }
+
+  function shouldSkip(node) {
+    var elementNode = node.nodeType === 1 ? node : node.parentElement;
+    if (!elementNode || !elementNode.closest) return true;
+    return Boolean(
+      elementNode.closest(
+        ".formbuilder-block, script, style, textarea, input, select, noscript, code, pre",
+      ),
+    );
+  }
+
+  function scan(root) {
+    if (!root) return;
+    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (textNode) {
+        if (!textNode.nodeValue || textNode.nodeValue.indexOf("[form:") === -1) {
+          return NodeFilter.FILTER_REJECT;
+        }
+        return shouldSkip(textNode) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
+      },
+    });
+    var matches = [];
+    while (walker.nextNode()) matches.push(walker.currentNode);
+    matches.forEach(replaceShortcodes);
+    root.querySelectorAll("[data-form-builder-form-id]").forEach(mount);
+  }
+
+  function scheduleScan() {
+    if (scanScheduled) return;
+    scanScheduled = true;
+    window.requestAnimationFrame(function () {
+      scanScheduled = false;
+      scan(document.body);
+    });
+  }
+
+  function start() {
+    scan(document.body);
+    if (!document.body || typeof MutationObserver === "undefined") return;
+    var observer = new MutationObserver(function (mutations) {
+      for (var index = 0; index < mutations.length; index += 1) {
+        var target = mutations[index].target;
+        if (!shouldSkip(target)) {
+          scheduleScan();
+          return;
+        }
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", start, { once: true });
+  } else {
+    start();
+  }
 })();

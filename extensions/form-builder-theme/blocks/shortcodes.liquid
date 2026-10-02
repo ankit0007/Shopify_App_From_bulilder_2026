@@ -1,0 +1,15 @@
+<script src="{{ 'form-builder.js' | asset_url }}" defer></script>
+{{ 'form-builder.css' | asset_url | stylesheet_tag }}
+
+{% schema %}
+{
+  "name": "Form shortcodes",
+  "target": "body",
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "Replaces [form:PUBLIC_ID] shortcodes on storefront pages with the published form."
+    }
+  ]
+}
+{% endschema %}

@@ -114,7 +114,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
       shopId,
       publicIdOrShortcode: params.publicId ?? "",
       values: body?.values,
-      source: "theme_app_block",
+      source: body?.source === "shortcode" ? "shortcode" : "theme_app_block",
     });
     if (!result.ok) {
       return jsonError(
