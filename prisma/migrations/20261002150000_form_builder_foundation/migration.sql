@@ -5,7 +5,7 @@ CREATE SCHEMA IF NOT EXISTS "public";
 CREATE TYPE "FormStatus" AS ENUM ('DRAFT', 'PUBLISHED', 'DISABLED');
 
 -- CreateEnum
-CREATE TYPE "FieldType" AS ENUM ('TEXT', 'EMAIL', 'PHONE', 'TEXTAREA', 'SELECT', 'RADIO', 'CHECKBOX', 'DATE', 'FILE', 'HEADING', 'PARAGRAPH');
+CREATE TYPE "FieldType" AS ENUM ('TEXT', 'EMAIL', 'PHONE', 'NUMBER', 'URL', 'PASSWORD', 'TEXTAREA', 'SELECT', 'MULTISELECT', 'RADIO', 'CHECKBOX', 'YES_NO', 'HIDDEN', 'DATE', 'TIME', 'DATETIME', 'FILE', 'HEADING', 'PARAGRAPH');
 
 -- CreateEnum
 CREATE TYPE "PlacementSurface" AS ENUM ('HOMEPAGE', 'PRODUCT', 'COLLECTION', 'PAGE', 'BLOG', 'ARTICLE', 'CART', 'THEME_APP_BLOCK', 'APP_EMBED', 'SHORTCODE');
@@ -66,6 +66,7 @@ CREATE TABLE "Form" (
     "title" TEXT,
     "status" "FormStatus" NOT NULL DEFAULT 'DRAFT',
     "currentVersion" INTEGER NOT NULL DEFAULT 1,
+    "publishedVersion" INTEGER,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -80,6 +81,7 @@ CREATE TABLE "FormVersion" (
     "layoutId" TEXT NOT NULL,
     "styleId" TEXT NOT NULL,
     "settings" JSONB NOT NULL,
+    "isPublished" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "FormVersion_pkey" PRIMARY KEY ("id")
@@ -93,6 +95,7 @@ CREATE TABLE "FormField" (
     "label" TEXT NOT NULL,
     "type" "FieldType" NOT NULL,
     "position" INTEGER NOT NULL,
+    "row" INTEGER NOT NULL DEFAULT 1,
     "column" INTEGER NOT NULL DEFAULT 1,
     "width" INTEGER NOT NULL DEFAULT 12,
     "required" BOOLEAN NOT NULL DEFAULT false,
@@ -241,7 +244,7 @@ CREATE UNIQUE INDEX "Form_shopId_name_key" ON "Form"("shopId", "name");
 CREATE UNIQUE INDEX "FormVersion_formId_version_key" ON "FormVersion"("formId", "version");
 
 -- CreateIndex
-CREATE INDEX "FormField_versionId_position_idx" ON "FormField"("versionId", "position");
+CREATE INDEX "FormField_versionId_row_position_idx" ON "FormField"("versionId", "row", "position");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "FormField_versionId_key_key" ON "FormField"("versionId", "key");

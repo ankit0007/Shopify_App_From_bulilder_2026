@@ -1,10 +1,10 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 import {
   type BuilderField,
-  type BuilderFieldType,
   type FormBuilderConfig,
   validateBuilderConfig,
 } from "./builder-schema";
+import type { BuilderFieldType } from "./field-registry";
 import { createFormShortcode } from "./shortcode";
 import { newFormPublicId } from "./ids";
 
@@ -60,12 +60,14 @@ function fieldToData(field: BuilderField) {
 function configToVersionData(config: FormBuilderConfig) {
   return {
     settings: asJson(config.settings),
-    layout: { columns: config.columns },
-    style: { tokens: asJson(config.style) },
-    fields: config.fields.map((field, position) => ({
-      ...fieldToData(field),
-      position,
-    })),
+    layout: { create: { columns: config.columns } },
+    style: { create: { tokens: asJson(config.style) } },
+    fields: {
+      create: config.fields.map((field, position) => ({
+        ...fieldToData(field),
+        position,
+      })),
+    },
   };
 }
 
@@ -148,7 +150,7 @@ export async function loadBuilderForm(
 
 export async function saveBuilderDraft(
   db: PrismaClient,
-  input: { shopId: string; formId: string; config: FormBuilderConfig },
+  input: { shopId: string; formId: string; config: FormBuilderConfig; name?: string },
 ) {
   const issues = validateBuilderConfig(input.config);
   if (issues.length) {
@@ -179,7 +181,7 @@ export async function saveBuilderDraft(
     if (current.isPublished) {
       const created = await tx.formVersion.create({
         data: {
-          formId: form.id,
+          form: { connect: { id: form.id } },
           version: nextVersion,
           isPublished: false,
           ...configToVersionData(input.config),
@@ -188,7 +190,10 @@ export async function saveBuilderDraft(
       versionId = created.id;
       await tx.form.update({
         where: { id: form.id },
-        data: { currentVersion: nextVersion },
+        data: {
+          currentVersion: nextVersion,
+          ...(input.name?.trim() ? { name: input.name.trim() } : {}),
+        },
       });
     } else {
       await tx.formField.deleteMany({ where: { versionId: current.id } });
@@ -206,6 +211,12 @@ export async function saveBuilderDraft(
           },
         },
       });
+      if (input.name?.trim()) {
+        await tx.form.update({
+          where: { id: form.id },
+          data: { name: input.name.trim() },
+        });
+      }
     }
 
     return { ok: true as const, versionId, publicId: form.publicId };
@@ -221,7 +232,7 @@ export async function publishBuilderForm(
     return { ok: false as const, issues: [{ path: "form", message: "Form not found." }] };
   }
 
-  const issues = validateBuilderConfig(loaded.config);
+  const issues = validateBuilderConfig(loaded.config, { forPublish: true });
   if (issues.length) {
     return { ok: false as const, issues };
   }

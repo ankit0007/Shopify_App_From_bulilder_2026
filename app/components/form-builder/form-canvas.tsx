@@ -89,7 +89,6 @@ function SortableField({
       className={`group relative rounded-xl border bg-white p-4 text-left shadow-sm transition ${
         selected ? "border-blue-500 ring-2 ring-blue-100" : "border-slate-200 hover:border-slate-300"
       } ${isDragging ? "z-10 opacity-70 shadow-xl" : ""}`}
-      onClick={onSelect}
       {...attributes}
     >
       <div className="flex items-start gap-3">
@@ -102,10 +101,10 @@ function SortableField({
           <span aria-hidden>⋮⋮</span>
         </button>
         <div className="min-w-0 flex-1">
-          <label className="block text-sm font-semibold text-slate-800">
+          <button type="button" onClick={onSelect} className="block text-left text-sm font-semibold text-slate-800 hover:text-blue-700">
             {field.label}
             {field.required && <span className="ml-1 text-red-500">*</span>}
-          </label>
+          </button>
           {field.description && <p className="mt-1 text-xs text-slate-400">{field.description}</p>}
           <FieldPreview field={field} />
         </div>
