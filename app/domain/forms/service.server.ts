@@ -46,7 +46,7 @@ export async function duplicateForm(
       versions: {
         orderBy: { version: "desc" },
         take: 1,
-        include: { fields: true },
+        include: { fields: true, layout: true, style: true },
       },
     },
   });
@@ -60,7 +60,7 @@ export async function duplicateForm(
     throw new Error("Form has no version");
   }
 
-  const sourceFields = version.fields as Prisma.FormFieldGetPayload<{}>[];
+  const sourceFields = version.fields;
   const copy = await db.form.create({
     data: {
       shopId: input.shopId,
@@ -71,9 +71,9 @@ export async function duplicateForm(
       versions: {
         create: {
           version: 1,
-          settings: version.settings,
+          settings: version.settings ?? {},
           layout: { create: { columns: version.layout.columns } },
-          style: { create: { tokens: version.style.tokens } },
+          style: { create: { tokens: version.style.tokens ?? {} } },
           fields: {
             create: sourceFields.map((field) => ({
               key: field.key,
