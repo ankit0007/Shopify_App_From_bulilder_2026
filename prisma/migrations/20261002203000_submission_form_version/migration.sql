@@ -62,7 +62,7 @@ ADD CONSTRAINT "Submission_shopId_formId_fkey"
 FOREIGN KEY ("shopId", "formId") REFERENCES "Form"("shopId", "id")
 ON DELETE CASCADE ON UPDATE CASCADE;
 
-ALTER TABLE "Submission" DROP CONSTRAINT "Submission_formVersionId_fkey";
+ALTER TABLE "Submission" DROP CONSTRAINT IF EXISTS "Submission_formVersionId_fkey";
 ALTER TABLE "Submission"
 ADD CONSTRAINT "Submission_formId_formVersionId_fkey"
 FOREIGN KEY ("formId", "formVersionId") REFERENCES "FormVersion"("formId", "id")
