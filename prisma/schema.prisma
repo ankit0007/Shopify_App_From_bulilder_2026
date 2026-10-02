@@ -1,0 +1,282 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Shop {
+  id             String          @id @default(cuid())
+  shopDomain     String          @unique
+  installedAt    DateTime        @default(now())
+  uninstalledAt  DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  forms          Form[]
+  displayRules   DisplayRule[]
+  submissions    Submission[]
+  files          FileAsset[]
+  notifications  Notification[]
+  integrations   Integration[]
+  billing        BillingState?
+  auditEvents    AuditEvent[]
+}
+
+model Session {
+  id                  String    @id
+  shop                String
+  state               String
+  isOnline            Boolean   @default(false)
+  scope               String?
+  expires             DateTime?
+  accessToken         String
+  userId              BigInt?
+  firstName           String?
+  lastName            String?
+  email               String?
+  accountOwner        Boolean   @default(false)
+  locale              String?
+  collaborator        Boolean?  @default(false)
+  emailVerified       Boolean?  @default(false)
+  refreshToken        String?
+  refreshTokenExpires DateTime?
+
+  @@index([shop])
+}
+
+model Form {
+  id            String       @id @default(cuid())
+  shopId        String
+  publicId      String       @unique
+  name          String
+  title         String?
+  status        FormStatus   @default(DRAFT)
+  currentVersion Int          @default(1)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  shop          Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  versions      FormVersion[]
+  displayRules  DisplayRule[]
+  submissions   Submission[]
+  notifications Notification[]
+
+  @@unique([shopId, name])
+  @@index([shopId, status])
+}
+
+model FormVersion {
+  id          String       @id @default(cuid())
+  formId      String
+  version     Int
+  layout      FormLayout   @relation(fields: [layoutId], references: [id], onDelete: Restrict)
+  layoutId    String
+  style       FormStyle    @relation(fields: [styleId], references: [id], onDelete: Restrict)
+  styleId     String
+  settings    Json
+  createdAt   DateTime     @default(now())
+  form        Form         @relation(fields: [formId], references: [id], onDelete: Cascade)
+  fields      FormField[]
+
+  @@unique([formId, version])
+}
+
+model FormField {
+  id            String      @id @default(cuid())
+  versionId     String
+  key           String
+  label         String
+  type          FieldType
+  position      Int
+  column        Int         @default(1)
+  width         Int         @default(12)
+  required      Boolean     @default(false)
+  configuration Json
+  validation    Json?
+  version       FormVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@unique([versionId, key])
+  @@index([versionId, position])
+}
+
+model FormLayout {
+  id       String        @id @default(cuid())
+  columns  Int           @default(1)
+  versions FormVersion[]
+}
+
+model FormStyle {
+  id       String        @id @default(cuid())
+  tokens   Json
+  versions FormVersion[]
+}
+
+model DisplayRule {
+  id        String             @id @default(cuid())
+  shopId    String
+  formId    String
+  surface   PlacementSurface
+  mode      PlacementMode      @default(SELECTED)
+  targetIds Json?
+  conditions Json?
+  enabled   Boolean            @default(true)
+  shop      Shop               @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  form      Form               @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, enabled])
+}
+
+model Submission {
+  id          String                 @id @default(cuid())
+  shopId      String
+  formId      String
+  status      SubmissionStatus      @default(NEW)
+  source      String?
+  utm         Json?
+  metadata    Json?
+  createdAt   DateTime               @default(now())
+  shop        Shop                   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  form        Form                   @relation(fields: [formId], references: [id], onDelete: Cascade)
+  values      SubmissionFieldValue[]
+  files       FileAsset[]
+
+  @@index([shopId, formId, createdAt])
+}
+
+model SubmissionFieldValue {
+  id           String     @id @default(cuid())
+  submissionId String
+  fieldKey     String
+  value        Json
+  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
+}
+
+model FileAsset {
+  id           String       @id @default(cuid())
+  shopId       String
+  submissionId String?
+  storageKey   String       @unique
+  originalName String
+  contentType  String
+  byteSize     Int
+  checksum     String?
+  createdAt    DateTime     @default(now())
+  shop         Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  submission   Submission?  @relation(fields: [submissionId], references: [id], onDelete: SetNull)
+
+  @@index([shopId, submissionId])
+}
+
+model Notification {
+  id        String             @id @default(cuid())
+  shopId    String
+  formId    String?
+  type      NotificationType
+  enabled   Boolean            @default(true)
+  config    Json
+  shop      Shop               @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  form      Form?              @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, enabled])
+}
+
+model Integration {
+  id        String            @id @default(cuid())
+  shopId    String
+  provider  String
+  status    IntegrationStatus @default(DISCONNECTED)
+  config    Json
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  shop      Shop              @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, provider])
+}
+
+model BillingState {
+  id              String   @id @default(cuid())
+  shopId          String   @unique
+  planKey         String   @default("free")
+  subscriptionRef String?
+  status          String   @default("active")
+  updatedAt       DateTime @updatedAt
+  shop            Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+}
+
+model AuditEvent {
+  id        String   @id @default(cuid())
+  shopId    String
+  actorId   String?
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, createdAt])
+}
+
+enum FormStatus {
+  DRAFT
+  PUBLISHED
+  DISABLED
+}
+
+enum FieldType {
+  TEXT
+  EMAIL
+  PHONE
+  TEXTAREA
+  SELECT
+  RADIO
+  CHECKBOX
+  DATE
+  FILE
+  HEADING
+  PARAGRAPH
+}
+
+enum PlacementSurface {
+  HOMEPAGE
+  PRODUCT
+  COLLECTION
+  PAGE
+  BLOG
+  ARTICLE
+  CART
+  THEME_APP_BLOCK
+  APP_EMBED
+  SHORTCODE
+}
+
+enum PlacementMode {
+  ALL
+  SELECTED
+  CONDITIONS
+}
+
+enum SubmissionStatus {
+  NEW
+  READ
+  ARCHIVED
+  SPAM
+}
+
+enum NotificationType {
+  EMAIL
+  AUTO_REPLY
+  WEBHOOK
+}
+
+enum IntegrationStatus {
+  CONNECTED
+  DISCONNECTED
+  ERROR
+}
