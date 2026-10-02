@@ -266,6 +266,7 @@ function versionToConfig(version: {
       row: field.row,
       column: field.column,
       width: field.width as BuilderField["width"],
+      widthMode: configuration.widthMode === "manual" ? "manual" : "auto",
       options: Array.isArray(configuration.options)
         ? configuration.options
             .map((option) => {

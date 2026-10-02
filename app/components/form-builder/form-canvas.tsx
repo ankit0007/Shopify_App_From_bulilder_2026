@@ -10,12 +10,19 @@ import type {
   FormBuilderConfig,
   FormStyleTokens,
 } from "../../domain/forms/builder-schema";
+import { fieldGridSpan } from "../../domain/forms/builder-schema";
 import { FIELD_REGISTRY } from "../../domain/forms/field-registry";
+import { sortBuilderFields } from "./builder-dnd";
 
-function fieldGridSpan(field: BuilderField, columns: number) {
-  return Math.max(
-    1,
-    Math.min(columns, Math.round((field.width / 12) * columns)),
+function fieldOccupiesCell(
+  field: BuilderField,
+  row: number,
+  column: number,
+  columns: number,
+) {
+  const span = fieldGridSpan(field, columns as FormBuilderConfig["columns"]);
+  return (
+    field.row === row && column >= field.column && column < field.column + span
   );
 }
 
@@ -121,6 +128,7 @@ function SortableField({
   selected,
   onSelect,
   onDelete,
+  dropTarget,
 }: {
   field: BuilderField;
   columns: number;
@@ -128,6 +136,7 @@ function SortableField({
   selected: boolean;
   onSelect: () => void;
   onDelete: () => void;
+  dropTarget: "before" | "after" | null;
 }) {
   const {
     attributes,
@@ -142,7 +151,9 @@ function SortableField({
   const animatedStyle = {
     transform: CSS.Transform.toString(transform),
     transition,
-    gridColumn: `span ${fieldGridSpan(field, columns)} / span ${fieldGridSpan(field, columns)}`,
+    gridColumn: `${Math.max(1, Math.min(columns, field.column))} / span ${fieldGridSpan(field, columns as FormBuilderConfig["columns"])}`,
+    gridRow: field.row,
+    minWidth: 0,
   };
 
   return (
@@ -156,10 +167,24 @@ function SortableField({
       } ${isDragging ? "z-10 opacity-70 shadow-xl" : ""}`}
       {...attributes}
     >
+      {dropTarget === "before" && (
+        <div className="pointer-events-none absolute -top-2 left-0 right-0 z-20 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-blue-600">
+          <span className="h-0.5 flex-1 bg-blue-500" />
+          <span className="rounded bg-blue-50 px-1.5 py-0.5">Drop here</span>
+          <span className="h-0.5 flex-1 bg-blue-500" />
+        </div>
+      )}
+      {dropTarget === "after" && (
+        <div className="pointer-events-none absolute -bottom-2 left-0 right-0 z-20 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-blue-600">
+          <span className="h-0.5 flex-1 bg-blue-500" />
+          <span className="rounded bg-blue-50 px-1.5 py-0.5">Drop here</span>
+          <span className="h-0.5 flex-1 bg-blue-500" />
+        </div>
+      )}
       <div className="flex items-start gap-3">
         <button
           type="button"
-          className="mt-0.5 cursor-grab rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="mt-0.5 touch-none cursor-grab rounded p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 active:cursor-grabbing"
           aria-label={`Reorder ${field.label}`}
           {...listeners}
         >
@@ -200,16 +225,28 @@ export function FormCanvas({
   selectedFieldId,
   onSelectField,
   onDeleteField,
+  activeId,
+  overId,
+  dropPosition,
 }: {
   config: FormBuilderConfig;
   selectedFieldId: string | null;
   onSelectField: (id: string) => void;
   onDeleteField: (id: string) => void;
+  activeId: string | null;
+  overId: string | null;
+  dropPosition: "before" | "after" | null;
 }) {
-  const { isOver, setNodeRef } = useDroppable({ id: "form-canvas" });
-  const sortedFields = [...config.fields].sort(
-    (a, b) => a.row - b.row || a.column - b.column,
+  const { isOver, setNodeRef } = useDroppable({
+    id: "form-canvas",
+    data: { type: "canvas" },
+  });
+  const sortedFields = sortBuilderFields(config.fields);
+  const maxRow = Math.max(
+    1,
+    sortedFields.reduce((max, field) => Math.max(max, field.row), 0) + 1,
   );
+  const dropRows = Array.from({ length: maxRow }, (_, index) => index + 1);
 
   return (
     <section
@@ -238,11 +275,32 @@ export function FormCanvas({
           </p>
         </div>
         <div
-          className="grid items-start gap-4"
+          className="relative grid min-h-64 items-start gap-4"
           style={{
             gridTemplateColumns: `repeat(${config.columns}, minmax(0, 1fr))`,
           }}
         >
+          {activeId &&
+            dropRows.flatMap((row) =>
+              Array.from(
+                { length: config.columns },
+                (_, index) => index + 1,
+              ).map((column) => {
+                const occupied = sortedFields.some((field) =>
+                  fieldOccupiesCell(field, row, column, config.columns),
+                );
+                if (occupied) return null;
+                return (
+                  <CanvasDropZone
+                    key={`canvas-cell:${row}:${column}`}
+                    row={row}
+                    column={column}
+                    active={overId === `canvas-cell:${row}:${column}`}
+                    visible={Boolean(activeId)}
+                  />
+                );
+              }),
+            )}
           <SortableContext
             items={sortedFields.map((field) => field.id)}
             strategy={rectSortingStrategy}
@@ -256,6 +314,11 @@ export function FormCanvas({
                 selected={field.id === selectedFieldId}
                 onSelect={() => onSelectField(field.id)}
                 onDelete={() => onDeleteField(field.id)}
+                dropTarget={
+                  overId === field.id && activeId !== field.id
+                    ? dropPosition
+                    : null
+                }
               />
             ))}
           </SortableContext>
@@ -290,5 +353,38 @@ export function FormCanvas({
         same future storefront schema.
       </p>
     </section>
+  );
+}
+
+function CanvasDropZone({
+  row,
+  column,
+  active,
+  visible,
+}: {
+  row: number;
+  column: number;
+  active: boolean;
+  visible: boolean;
+}) {
+  const { setNodeRef } = useDroppable({
+    id: `canvas-cell:${row}:${column}`,
+    data: { type: "canvas-cell", row, column },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`z-0 flex min-h-24 items-center justify-center rounded-xl border-2 border-dashed p-3 text-center text-xs transition ${
+        visible
+          ? active
+            ? "border-blue-400 bg-blue-50 text-blue-700"
+            : "border-slate-200 text-slate-400"
+          : "pointer-events-none opacity-0"
+      }`}
+      style={{ gridColumn: column, gridRow: row }}
+    >
+      Drop field here
+    </div>
   );
 }

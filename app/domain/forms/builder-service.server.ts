@@ -105,6 +105,7 @@ function fieldToData(field: BuilderField) {
       defaultValue: field.defaultValue,
       disabled: field.disabled,
       hidden: field.hidden,
+      widthMode: field.widthMode ?? "auto",
       options: field.options,
     }),
     validation: asJson(field.validation),
@@ -174,6 +175,7 @@ function dataToConfig(version: {
         row: field.row,
         column: field.column,
         width: field.width as BuilderField["width"],
+        widthMode: configuration.widthMode === "manual" ? "manual" : "auto",
         options: Array.isArray(configuration.options)
           ? (configuration.options as BuilderField["options"])
           : [],

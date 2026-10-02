@@ -117,6 +117,40 @@ describe("storefront submissions", () => {
     if (!result.ok) expect(result.issues).toHaveLength(2);
   });
 
+  it("accepts valid multi-select arrays and rejects unknown options", () => {
+    const form = {
+      ...baseForm,
+      columns: 2 as const,
+      fields: [
+        { ...baseForm.fields[0], row: 1, column: 1, width: 6 as const },
+        {
+          ...baseForm.fields[0],
+          type: "multiselect" as const,
+          name: "topics",
+          required: true,
+          row: 1,
+          column: 2,
+          width: 6 as const,
+          options: [
+            { label: "A", value: "a" },
+            { label: "B", value: "b" },
+            { label: "C", value: "c" },
+          ],
+        },
+      ],
+    };
+
+    expect(
+      validateSubmission(form, { name: "Ada", topics: ["a", "c"] }),
+    ).toEqual({
+      ok: true,
+      values: { name: "Ada", topics: ["a", "c"] },
+    });
+    expect(
+      validateSubmission(form, { name: "Ada", topics: ["a", "unknown"] }),
+    ).toEqual(expect.objectContaining({ ok: false }));
+  });
+
   it("does not trust submitted hidden values and ignores disabled fields", () => {
     const form = {
       ...baseForm,

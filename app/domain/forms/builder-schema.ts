@@ -6,6 +6,7 @@ import {
 
 export const ALLOWED_WIDTHS = [3, 4, 6, 8, 9, 12] as const;
 export type FieldWidth = (typeof ALLOWED_WIDTHS)[number];
+export type FieldWidthMode = "auto" | "manual";
 
 export type FieldValidation = {
   minLength?: number;
@@ -31,6 +32,7 @@ export type BuilderField = {
   row: number;
   column: number;
   width: FieldWidth;
+  widthMode?: FieldWidthMode;
   options: FieldOption[];
   validation: FieldValidation;
 };
@@ -66,6 +68,32 @@ export type FormBuilderConfig = {
   style: FormStyleTokens;
   fields: BuilderField[];
 };
+
+export function autoFieldWidth(
+  columns: FormBuilderConfig["columns"],
+): FieldWidth {
+  return columns === 1 ? 12 : columns === 2 ? 6 : 4;
+}
+
+export function effectiveFieldWidth(
+  field: Pick<BuilderField, "width" | "widthMode">,
+  columns: FormBuilderConfig["columns"],
+): FieldWidth {
+  return field.widthMode === "manual" ? field.width : autoFieldWidth(columns);
+}
+
+export function fieldGridSpan(
+  field: Pick<BuilderField, "width" | "widthMode">,
+  columns: FormBuilderConfig["columns"],
+) {
+  return Math.max(
+    1,
+    Math.min(
+      columns,
+      Math.ceil((effectiveFieldWidth(field, columns) / 12) * columns),
+    ),
+  );
+}
 
 export const DEFAULT_FORM_SETTINGS: FormSettings = {
   description: "",
@@ -535,6 +563,20 @@ export function parseBuilderConfig(
         min: 1,
         max: 12,
       }) as FieldWidth,
+      widthMode:
+        rawField.widthMode === undefined
+          ? "auto"
+          : rawField.widthMode === "manual"
+            ? "manual"
+            : rawField.widthMode === "auto"
+              ? "auto"
+              : (() => {
+                  issues.push({
+                    path: `${path}.widthMode`,
+                    message: "Choose automatic or manual width.",
+                  });
+                  return "auto" as const;
+                })(),
       options,
       validation,
     });

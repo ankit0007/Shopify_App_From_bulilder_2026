@@ -3,6 +3,7 @@ import type {
   FormBuilderConfig,
   FormStyleTokens,
 } from "../../domain/forms/builder-schema";
+import { autoFieldWidth } from "../../domain/forms/builder-schema";
 import { FIELD_REGISTRY } from "../../domain/forms/field-registry";
 
 const inputClass =
@@ -143,13 +144,28 @@ export function FieldSettingsPanel({
           <FieldSetting label="Width">
             <select
               className={inputClass}
-              value={field.width}
+              value={
+                field.widthMode === "manual" ? String(field.width) : "auto"
+              }
               onChange={(event) =>
-                onChange({
-                  width: Number(event.target.value) as BuilderField["width"],
-                })
+                event.target.value === "auto"
+                  ? onChange({
+                      width: autoFieldWidth(columns as 1 | 2 | 3),
+                      widthMode: "auto",
+                    })
+                  : onChange({
+                      width: Number(
+                        event.target.value,
+                      ) as BuilderField["width"],
+                      widthMode: "manual",
+                    })
               }
             >
+              <option value="auto">
+                Auto (
+                {Math.round((autoFieldWidth(columns as 1 | 2 | 3) / 12) * 100)}
+                %)
+              </option>
               {[3, 4, 6, 8, 9, 12].map((width) => (
                 <option key={width} value={width}>
                   {Math.round((width / 12) * 100)}%

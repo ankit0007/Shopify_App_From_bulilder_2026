@@ -3,18 +3,20 @@ import {
   DragOverlay,
   KeyboardSensor,
   PointerSensor,
-  closestCenter,
+  closestCorners,
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragOverEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { useMemo, useState } from "react";
+import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { useFetcher } from "react-router";
 import {
   DEFAULT_FORM_SETTINGS,
   DEFAULT_STYLE_TOKENS,
+  autoFieldWidth,
   type BuilderField,
   type FormBuilderConfig,
 } from "../../domain/forms/builder-schema";
@@ -25,6 +27,12 @@ import {
 } from "../../domain/forms/field-registry";
 import { FieldLibrary } from "./field-library";
 import { FormCanvas } from "./form-canvas";
+import {
+  moveBuilderField,
+  normalizeBuilderConfigForColumns,
+  placeLibraryField,
+  type DropPosition,
+} from "./builder-dnd";
 import {
   FieldSettingsPanel,
   FormSettingsPanel,
@@ -62,7 +70,8 @@ export function createBuilderField(
     hidden: false,
     row: Math.floor(index / 1) + 1,
     column: 1,
-    width: 12,
+    width: autoFieldWidth(1),
+    widthMode: "auto",
     options: definition.supportsOptions
       ? [
           { label: "Option 1", value: "option_1" },
@@ -110,6 +119,9 @@ export function BuilderShell({
   const [panel, setPanel] = useState<Panel>("form");
   const [previewMode, setPreviewMode] = useState<PreviewMode>("desktop");
   const [activeType, setActiveType] = useState<BuilderFieldType | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+  const [dropPosition, setDropPosition] = useState<DropPosition>("before");
   const [dirty, setDirty] = useState(false);
   const hasPendingDraft = form.hasPendingDraft;
   const lifecycleState = form.lifecycleState;
@@ -144,39 +156,76 @@ export function BuilderShell({
   };
 
   const handleDragStart = ({ active }: DragStartEvent) => {
-    const type = active.data.current?.type as BuilderFieldType | undefined;
+    const draggedField = config.fields.find(
+      (field) => field.id === String(active.id),
+    );
+    const type =
+      (active.data.current?.type as BuilderFieldType | undefined) ??
+      draggedField?.type;
     setActiveType(type ?? null);
+    setActiveId(String(active.id));
+    setOverId(String(active.id));
+    setDropPosition("before");
+  };
+
+  const handleDragOver = ({ active, over }: DragOverEvent) => {
+    if (!over) {
+      setOverId(null);
+      return;
+    }
+    const nextOverId = String(over.id);
+    setOverId(nextOverId);
+    if (active.id === over.id || nextOverId.startsWith("canvas-cell:")) return;
+
+    const activeRect = active.rect.current.translated;
+    const overRect = over.rect;
+    if (!activeRect || !overRect) return;
+    const activeCenterY = activeRect.top + activeRect.height / 2;
+    const activeCenterX = activeRect.left + activeRect.width / 2;
+    const overCenterY = overRect.top + overRect.height / 2;
+    const overCenterX = overRect.left + overRect.width / 2;
+    const verticalDelta = Math.abs(activeCenterY - overCenterY);
+    const horizontalDelta = Math.abs(activeCenterX - overCenterX);
+    setDropPosition(
+      verticalDelta >= horizontalDelta
+        ? activeCenterY >= overCenterY
+          ? "after"
+          : "before"
+        : activeCenterX >= overCenterX
+          ? "after"
+          : "before",
+    );
   };
 
   const handleDragEnd = ({ active, over }: DragEndEvent) => {
     setActiveType(null);
+    setActiveId(null);
+    setOverId(null);
     if (!over) return;
     if (String(active.id).startsWith("library:")) {
       const type = active.data.current?.type as BuilderFieldType;
       const field = createBuilderField(type, config.fields.length);
-      updateConfig({ ...config, fields: [...config.fields, field] });
+      updateConfig(
+        placeLibraryField(config, field, String(over.id), dropPosition),
+      );
       setSelectedFieldId(field.id);
       setPanel("field");
       return;
     }
     if (active.id === over.id) return;
-    const oldIndex = config.fields.findIndex((field) => field.id === active.id);
-    const newIndex = config.fields.findIndex((field) => field.id === over.id);
-    if (oldIndex >= 0 && newIndex >= 0) {
-      const target = config.fields[newIndex];
-      const moved = {
-        ...config.fields[oldIndex],
-        column: target.column,
-        row: target.row,
-      };
-      const reordered = config.fields.map((field) =>
-        field.id === moved.id ? moved : field,
-      );
-      updateConfig({
-        ...config,
-        fields: arrayMove(reordered, oldIndex, newIndex),
-      });
-    }
+    const nextConfig = moveBuilderField(
+      config,
+      String(active.id),
+      String(over.id),
+      dropPosition,
+    );
+    if (nextConfig) updateConfig(nextConfig);
+  };
+
+  const handleDragCancel = () => {
+    setActiveType(null);
+    setActiveId(null);
+    setOverId(null);
   };
 
   const updateSelectedField = (patch: Partial<BuilderField>) => {
@@ -208,10 +257,11 @@ export function BuilderShell({
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCenter}
+      collisionDetection={closestCorners}
       onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
-      onDragCancel={() => setActiveType(null)}
+      onDragCancel={handleDragCancel}
     >
       <div className="min-h-screen bg-slate-50 text-slate-950">
         <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:px-6">
@@ -363,11 +413,10 @@ export function BuilderShell({
                     onClick={() =>
                       updateConfig({
                         ...config,
-                        columns: columns as 1 | 2 | 3,
-                        fields: config.fields.map((field) => ({
-                          ...field,
-                          column: Math.min(field.column, columns),
-                        })),
+                        ...normalizeBuilderConfigForColumns(
+                          config,
+                          columns as 1 | 2 | 3,
+                        ),
                       })
                     }
                     className={`rounded-md px-2.5 py-1.5 text-xs font-semibold ${config.columns === columns ? "bg-white text-blue-700 shadow-sm" : "text-slate-500"}`}
@@ -388,6 +437,9 @@ export function BuilderShell({
                   setPanel("field");
                 }}
                 onDeleteField={deleteField}
+                activeId={activeId}
+                overId={overId}
+                dropPosition={dropPosition}
               />
             </div>
           </section>
@@ -454,10 +506,18 @@ export function BuilderShell({
           </aside>
         </main>
       </div>
-      <DragOverlay>
+      <DragOverlay dropAnimation={null}>
         {activeType ? (
-          <div className="rounded-lg border border-blue-200 bg-white px-4 py-3 text-sm font-semibold shadow-xl">
-            {FIELD_REGISTRY[activeType].label}
+          <div className="w-64 rounded-xl border border-blue-200 bg-white/95 px-4 py-3 text-sm font-semibold text-slate-800 shadow-2xl ring-1 ring-blue-100">
+            <div className="flex items-center gap-3">
+              <span className="cursor-grabbing text-slate-400" aria-hidden>
+                ⋮⋮
+              </span>
+              <span>{FIELD_REGISTRY[activeType].label}</span>
+            </div>
+            <p className="mt-1 pl-6 text-xs font-normal text-slate-400">
+              Release to place this field
+            </p>
           </div>
         ) : null}
       </DragOverlay>

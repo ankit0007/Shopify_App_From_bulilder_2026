@@ -77,7 +77,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     if (!form) return jsonError("Form not found.", 404);
     return Response.json(
       { ok: true, form: toPublicForm(form) },
-      { headers: { "Cache-Control": "private, max-age=60" } },
+      { headers: { "Cache-Control": "private, no-store" } },
     );
   } catch {
     return jsonError("Form not found.", 404);

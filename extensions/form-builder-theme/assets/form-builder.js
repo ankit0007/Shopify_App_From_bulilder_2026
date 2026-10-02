@@ -39,17 +39,63 @@
     if (!root) return;
     root.style.setProperty("--formbuilder-text", style.textColor);
     root.style.setProperty("--formbuilder-background", style.background);
-    root.style.setProperty("--formbuilder-input-background", style.inputBackground);
+    root.style.setProperty(
+      "--formbuilder-input-background",
+      style.inputBackground,
+    );
     root.style.setProperty("--formbuilder-border", style.borderColor);
-    root.style.setProperty("--formbuilder-border-width", style.borderWidth + "px");
-    root.style.setProperty("--formbuilder-radius", "var(--formbuilder-radius-" + style.borderRadius + ")");
-    root.style.setProperty("--formbuilder-button-background", style.buttonBackground);
+    root.style.setProperty(
+      "--formbuilder-border-width",
+      style.borderWidth + "px",
+    );
+    root.style.setProperty(
+      "--formbuilder-radius",
+      "var(--formbuilder-radius-" + style.borderRadius + ")",
+    );
+    root.style.setProperty(
+      "--formbuilder-button-background",
+      style.buttonBackground,
+    );
     root.style.setProperty("--formbuilder-button-text", style.buttonTextColor);
-    root.style.setProperty("--formbuilder-button-radius", "var(--formbuilder-radius-" + style.buttonRadius + ")");
+    root.style.setProperty(
+      "--formbuilder-button-radius",
+      "var(--formbuilder-radius-" + style.buttonRadius + ")",
+    );
     root.style.setProperty("--formbuilder-font-family", style.fontFamily);
-    root.style.setProperty("--formbuilder-font-size", style.fontSize === "sm" ? "0.875rem" : style.fontSize === "lg" ? "1.125rem" : "1rem");
-    root.style.setProperty("--formbuilder-form-width", style.formWidth === "sm" ? "32rem" : style.formWidth === "lg" ? "56rem" : style.formWidth === "full" ? "100%" : "48rem");
-    root.style.setProperty("--formbuilder-gap", style.fieldSpacing === "compact" ? "0.6rem" : style.fieldSpacing === "spacious" ? "1.5rem" : "1rem");
+    root.style.setProperty(
+      "--formbuilder-font-size",
+      style.fontSize === "sm"
+        ? "0.875rem"
+        : style.fontSize === "lg"
+          ? "1.125rem"
+          : "1rem",
+    );
+    root.style.setProperty(
+      "--formbuilder-label-size",
+      style.labelSize === "lg"
+        ? "1rem"
+        : style.labelSize === "base"
+          ? "0.9375rem"
+          : "0.875rem",
+    );
+    root.style.setProperty(
+      "--formbuilder-form-width",
+      style.formWidth === "sm"
+        ? "32rem"
+        : style.formWidth === "lg"
+          ? "56rem"
+          : style.formWidth === "full"
+            ? "100%"
+            : "48rem",
+    );
+    root.style.setProperty(
+      "--formbuilder-gap",
+      style.fieldSpacing === "compact"
+        ? "0.6rem"
+        : style.fieldSpacing === "spacious"
+          ? "1.5rem"
+          : "1rem",
+    );
   }
 
   function makeControl(field, describedBy) {
@@ -59,7 +105,12 @@
       control = element("textarea", "formbuilder-control");
       if (field.rows) control.rows = field.rows;
     } else if (type === "select" || type === "multiselect") {
-      control = element("select", "formbuilder-control");
+      control = element(
+        "select",
+        type === "multiselect"
+          ? "formbuilder-control formbuilder-multiselect"
+          : "formbuilder-control",
+      );
       if (type === "multiselect") control.multiple = true;
       field.options.forEach(function (option) {
         var item = element("option");
@@ -67,6 +118,9 @@
         item.textContent = option.label;
         control.appendChild(item);
       });
+      if (type === "multiselect") {
+        control.size = Math.min(6, Math.max(3, field.options.length));
+      }
     } else {
       control = element("input", "formbuilder-control");
       control.type = type === "datetime" ? "datetime-local" : type;
@@ -76,8 +130,14 @@
     control.disabled = Boolean(field.disabled);
     control.required = Boolean(field.required);
     if (field.type === "phone") control.inputMode = "tel";
-    if (field.placeholder && "placeholder" in control) control.placeholder = field.placeholder;
-    if (field.defaultValue && type !== "checkbox" && type !== "radio" && type !== "multiselect") {
+    if (field.placeholder && "placeholder" in control)
+      control.placeholder = field.placeholder;
+    if (
+      field.defaultValue &&
+      type !== "checkbox" &&
+      type !== "radio" &&
+      type !== "multiselect"
+    ) {
       control.value = field.defaultValue;
     }
     if (type === "select" && !field.defaultValue) {
@@ -111,16 +171,22 @@
     var group = element("div", "formbuilder-choice-group");
     group.setAttribute("role", "group");
     group.setAttribute("aria-describedby", describedBy);
-    var options = field.type === "yes_no"
-      ? [{ label: "Yes", value: "yes" }, { label: "No", value: "no" }]
-      : field.options;
+    var options =
+      field.type === "yes_no"
+        ? [
+            { label: "Yes", value: "yes" },
+            { label: "No", value: "no" },
+          ]
+        : field.options;
     options.forEach(function (option) {
       var label = element("label", "formbuilder-choice");
       var input = element("input");
       input.type = field.type === "radio" ? "radio" : "checkbox";
       input.name = field.name;
       input.value = option.value;
-      input.required = Boolean(field.required && (field.type === "radio" || field.type === "yes_no"));
+      input.required = Boolean(
+        field.required && (field.type === "radio" || field.type === "yes_no"),
+      );
       input.disabled = Boolean(field.disabled);
       label.appendChild(input);
       var text = element("span");
@@ -142,7 +208,8 @@
         .filter(function (id) {
           return id && !id.endsWith("-error");
         });
-      if (describedBy.length) control.setAttribute("aria-describedby", describedBy.join(" "));
+      if (describedBy.length)
+        control.setAttribute("aria-describedby", describedBy.join(" "));
       else control.removeAttribute("aria-describedby");
     });
   }
@@ -176,12 +243,12 @@
     if (firstInvalid) firstInvalid.focus();
   }
 
-  function renderField(field, columns, instanceKey) {
+  function renderField(field, columns, instanceKey, placement) {
     var wrapper = element("div", "formbuilder-field");
-    var span = Math.max(1, Math.min(columns, Math.round((field.width / 12) * columns)));
-    wrapper.style.gridColumn = Math.max(1, field.column) + " / span " + span;
-    wrapper.style.gridRow = String(Math.max(1, field.row));
-    wrapper.dataset.formbuilderRow = String(field.row);
+    var span = placement.span;
+    wrapper.style.gridColumn = placement.column + " / span " + span;
+    wrapper.style.gridRow = String(placement.row);
+    wrapper.dataset.formbuilderRow = String(placement.row);
     wrapper.dataset.formbuilderField = field.name;
     var controlId = "formbuilder-" + instanceKey + "-" + field.name;
     var describedBy = controlId + "-description";
@@ -193,7 +260,10 @@
       return wrapper;
     }
 
-    var isChoice = field.type === "radio" || field.type === "checkbox" || field.type === "yes_no";
+    var isChoice =
+      field.type === "radio" ||
+      field.type === "checkbox" ||
+      field.type === "yes_no";
     var label = element(isChoice ? "legend" : "label", "formbuilder-label");
     if (isChoice) {
       label.id = controlId + "-label";
@@ -215,15 +285,20 @@
       wrapper.appendChild(label);
     }
     if (field.description) {
-      var description = setAttributes(element("span", "formbuilder-description"), {
-        id: describedBy,
-      });
+      var description = setAttributes(
+        element("span", "formbuilder-description"),
+        {
+          id: describedBy,
+        },
+      );
       description.textContent = field.description;
       wrapper.appendChild(description);
     }
 
     var control =
-      field.type === "radio" || field.type === "checkbox" || field.type === "yes_no"
+      field.type === "radio" ||
+      field.type === "checkbox" ||
+      field.type === "yes_no"
         ? renderChoice(field, field.description ? describedBy : undefined)
         : makeControl(field, field.description ? describedBy : undefined);
     if (isChoice) {
@@ -243,7 +318,9 @@
     var values = {};
     new FormData(form).forEach(function (value, key) {
       if (key in values) {
-        values[key] = Array.isArray(values[key]) ? values[key].concat([value]) : [values[key], value];
+        values[key] = Array.isArray(values[key])
+          ? values[key].concat([value])
+          : [values[key], value];
       } else {
         values[key] = value;
       }
@@ -256,11 +333,64 @@
     var form = element("form", "formbuilder-form");
     form.noValidate = false;
     form.setAttribute("aria-label", root.getAttribute("aria-label") || "Form");
-    form.style.setProperty("--formbuilder-columns", String(payload.form.columns));
+    form.style.setProperty(
+      "--formbuilder-columns",
+      String(payload.form.columns),
+    );
     styleForm(form, payload.form.style);
     var fields = element("div", "formbuilder-fields");
+    var occupied = {};
     payload.form.fields.forEach(function (field) {
-      fields.appendChild(renderField(field, payload.form.columns, root.dataset.formBuilderInstance));
+      var requestedRow = Math.max(1, Number(field.row) || 1);
+      var requestedColumn = Math.max(
+        1,
+        Math.min(payload.form.columns, Number(field.column) || 1),
+      );
+      var effectiveWidth =
+        field.widthMode === "manual"
+          ? Number(field.width)
+          : 12 / payload.form.columns;
+      var span = Math.max(
+        1,
+        Math.min(
+          payload.form.columns,
+          Math.ceil((effectiveWidth / 12) * payload.form.columns),
+        ),
+      );
+      var row = requestedRow;
+      var column = requestedColumn;
+      function isOccupied(candidateRow, candidateColumn) {
+        for (var offset = 0; offset < span; offset += 1) {
+          if (occupied[candidateRow + ":" + (candidateColumn + offset)])
+            return true;
+        }
+        return false;
+      }
+      while (
+        isOccupied(row, column) ||
+        column + span - 1 > payload.form.columns
+      ) {
+        column += 1;
+        if (column + span - 1 > payload.form.columns) {
+          row += 1;
+          column = 1;
+        }
+      }
+      for (var offset = 0; offset < span; offset += 1) {
+        occupied[row + ":" + (column + offset)] = true;
+      }
+      fields.appendChild(
+        renderField(
+          field,
+          payload.form.columns,
+          root.dataset.formBuilderInstance,
+          {
+            row: row,
+            column: column,
+            span: span,
+          },
+        ),
+      );
     });
     form.appendChild(fields);
     var actions = element("div", "formbuilder-actions");
@@ -277,14 +407,25 @@
       messages.textContent = "";
       clearFieldErrors(form);
       submit.disabled = true;
-      fetch(root.dataset.formBuilderEndpoint + "/" + encodeURIComponent(root.dataset.formBuilderFormId), {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({
-          values: collectValues(form),
-          source: root.dataset.formBuilderShortcode === "true" ? "shortcode" : "theme_app_block",
-        }),
-      })
+      fetch(
+        root.dataset.formBuilderEndpoint +
+          "/" +
+          encodeURIComponent(root.dataset.formBuilderFormId),
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            values: collectValues(form),
+            source:
+              root.dataset.formBuilderShortcode === "true"
+                ? "shortcode"
+                : "theme_app_block",
+          }),
+        },
+      )
         .then(function (response) {
           return response.json().then(function (body) {
             if (!response.ok) throw body;
@@ -292,12 +433,14 @@
           });
         })
         .then(function (body) {
-          messages.textContent = body.message || payload.form.settings.successMessage;
+          messages.textContent =
+            body.message || payload.form.settings.successMessage;
           form.reset();
         })
         .catch(function (body) {
           showFieldErrors(form, body && body.issues);
-          messages.textContent = body.error || payload.form.settings.errorMessage;
+          messages.textContent =
+            body.error || payload.form.settings.errorMessage;
         })
         .finally(function () {
           submit.disabled = false;
@@ -311,6 +454,7 @@
     if (!formRequests[key]) {
       formRequests[key] = fetch(endpoint + "/" + encodeURIComponent(publicId), {
         headers: { Accept: "application/json" },
+        cache: "no-store",
       })
         .then(function (response) {
           if (!response.ok) throw new Error("unavailable");
@@ -365,7 +509,9 @@
     var match;
     while ((match = SHORTCODE_PATTERN.exec(value))) {
       if (match.index > cursor) {
-        fragment.appendChild(document.createTextNode(value.slice(cursor, match.index)));
+        fragment.appendChild(
+          document.createTextNode(value.slice(cursor, match.index)),
+        );
       }
       fragment.appendChild(createShortcodeHost(match[1]));
       cursor = match.index + match[0].length;
@@ -390,10 +536,15 @@
     if (!root) return;
     var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
       acceptNode: function (textNode) {
-        if (!textNode.nodeValue || textNode.nodeValue.indexOf("[form:") === -1) {
+        if (
+          !textNode.nodeValue ||
+          textNode.nodeValue.indexOf("[form:") === -1
+        ) {
           return NodeFilter.FILTER_REJECT;
         }
-        return shouldSkip(textNode) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
+        return shouldSkip(textNode)
+          ? NodeFilter.FILTER_REJECT
+          : NodeFilter.FILTER_ACCEPT;
       },
     });
     var matches = [];

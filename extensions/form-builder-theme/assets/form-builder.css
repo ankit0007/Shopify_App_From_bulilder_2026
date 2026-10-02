@@ -3,11 +3,19 @@
   --formbuilder-radius-sm: 0.25rem;
   --formbuilder-radius-md: 0.5rem;
   --formbuilder-radius-lg: 0.75rem;
+  box-sizing: border-box;
   color: var(--formbuilder-text, inherit);
   background: var(--formbuilder-background, transparent);
   font-family: var(--formbuilder-font-family, inherit);
   max-width: 100%;
-  padding: 1rem;
+  overflow-wrap: anywhere;
+  padding: clamp(0.75rem, 2vw, 1.5rem);
+}
+
+.formbuilder-block *,
+.formbuilder-block *::before,
+.formbuilder-block *::after {
+  box-sizing: border-box;
 }
 
 .formbuilder-form {
@@ -15,16 +23,21 @@
   font-size: var(--formbuilder-font-size, 1rem);
   margin: 0 auto;
   max-width: var(--formbuilder-form-width, 48rem);
+  min-width: 0;
+  width: 100%;
 }
 
 .formbuilder-fields {
+  align-items: start;
   display: grid;
   grid-template-columns: repeat(var(--formbuilder-columns, 1), minmax(0, 1fr));
   gap: var(--formbuilder-gap, 1rem);
+  min-width: 0;
 }
 
 .formbuilder-field {
   min-width: 0;
+  width: 100%;
 }
 
 .formbuilder-fieldset {
@@ -39,16 +52,17 @@
 }
 
 .formbuilder-label {
-  font-size: 0.9375rem;
+  font-size: var(--formbuilder-label-size, 0.875rem);
   font-weight: 600;
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.4rem;
 }
 
 .formbuilder-description {
   color: rgba(15, 23, 42, 0.68);
   color: color-mix(in srgb, currentColor 68%, transparent);
   font-size: 0.8125rem;
-  margin-bottom: 0.4rem;
+  line-height: 1.45;
+  margin-bottom: 0.5rem;
 }
 
 .formbuilder-required {
@@ -57,19 +71,42 @@
 
 .formbuilder-control {
   background: var(--formbuilder-input-background, #fff);
-  border: var(--formbuilder-border-width, 1px) solid var(--formbuilder-border, #cbd5e1);
+  border: var(--formbuilder-border-width, 1px) solid
+    var(--formbuilder-border, #cbd5e1);
   border-radius: var(--formbuilder-radius, 0.5rem);
   box-sizing: border-box;
   color: inherit;
   font: inherit;
   min-height: 2.75rem;
   padding: 0.65rem 0.75rem;
+  max-width: 100%;
   width: 100%;
 }
 
 textarea.formbuilder-control {
   min-height: 7rem;
   resize: vertical;
+}
+
+.formbuilder-multiselect {
+  min-height: 7.5rem;
+  padding: 0.35rem;
+}
+
+.formbuilder-multiselect option {
+  border-radius: 0.25rem;
+  line-height: 1.4;
+  padding: 0.45rem 0.5rem;
+}
+
+.formbuilder-multiselect option:checked {
+  background: var(--formbuilder-button-background, #0f172a)
+    linear-gradient(
+      0deg,
+      var(--formbuilder-button-background, #0f172a),
+      var(--formbuilder-button-background, #0f172a)
+    );
+  color: var(--formbuilder-button-text, #fff);
 }
 
 .formbuilder-control:focus-visible,
@@ -83,6 +120,7 @@ textarea.formbuilder-control {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem 1rem;
+  min-width: 0;
   padding-top: 0.35rem;
 }
 
@@ -123,10 +161,26 @@ textarea.formbuilder-control {
 
 .formbuilder-error {
   color: #b42318;
+  display: block;
+  margin-top: 0.4rem;
 }
 
-@media (max-width: 40rem) {
+@media (max-width: 48rem) {
+  .formbuilder-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .formbuilder-field {
     grid-column: 1 / -1 !important;
+    grid-row: auto !important;
+  }
+
+  .formbuilder-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .formbuilder-submit {
+    width: 100%;
   }
 }
