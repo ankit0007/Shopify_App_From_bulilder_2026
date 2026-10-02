@@ -49,11 +49,7 @@ export default defineConfig({
       allow: ["app", "node_modules"],
     },
   },
-  plugins: [
-    reactRouter(),
-    tsconfigPaths(),
-    tailwindcss(),
-  ],
+  plugins: [reactRouter(), tsconfigPaths(), tailwindcss()],
   build: {
     assetsInlineLimit: 0,
   },

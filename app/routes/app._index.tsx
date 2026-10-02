@@ -22,10 +22,12 @@ export default function Index() {
       </s-section>
       <s-section heading="Phase 1 foundation">
         <s-stack direction="block" gap="base">
-          <s-text>Tenant isolation and immutable form public IDs are ready.</s-text>
           <s-text>
-            Form editing, placement rules, and submission workflows will be added
-            in later phases.
+            Tenant isolation and immutable form public IDs are ready.
+          </s-text>
+          <s-text>
+            Form editing, placement rules, and submission workflows will be
+            added in later phases.
           </s-text>
         </s-stack>
       </s-section>

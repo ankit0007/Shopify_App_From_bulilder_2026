@@ -26,7 +26,11 @@ describe("form service identity and tenant boundaries", () => {
     const db = fakeDatabase();
     db.form.create
       .mockResolvedValueOnce({ id: "one", publicId: "first", name: "Contact" })
-      .mockResolvedValueOnce({ id: "two", publicId: "second", name: "Contact copy" });
+      .mockResolvedValueOnce({
+        id: "two",
+        publicId: "second",
+        name: "Contact copy",
+      });
     db.form.findFirst.mockResolvedValue({
       title: "Contact",
       versions: [

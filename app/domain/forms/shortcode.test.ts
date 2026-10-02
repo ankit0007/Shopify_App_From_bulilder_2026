@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { newFormPublicId } from "./ids";
-import {
-  createFormShortcode,
-  parseFormShortcode,
-} from "./shortcode";
+import { createFormShortcode, parseFormShortcode } from "./shortcode";
 
 describe("form public identifiers", () => {
   it("generates unique identifiers", () => {
@@ -14,9 +11,7 @@ describe("form public identifiers", () => {
   it("derives the shortcode only from the immutable public ID", () => {
     const publicId = "184729";
     expect(createFormShortcode(publicId)).toBe("[form:184729]");
-    expect(createFormShortcode(publicId)).toBe(
-      createFormShortcode(publicId),
-    );
+    expect(createFormShortcode(publicId)).toBe(createFormShortcode(publicId));
   });
 
   it("does not change when the form name changes", () => {
