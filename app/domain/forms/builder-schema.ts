@@ -63,6 +63,31 @@ export type FormBuilderConfig = {
   fields: BuilderField[];
 };
 
+export const DEFAULT_FORM_SETTINGS: FormSettings = {
+  description: "",
+  submitLabel: "Submit",
+  successMessage: "Thanks for getting in touch.",
+  errorMessage: "Something went wrong. Please try again.",
+};
+
+export const DEFAULT_STYLE_TOKENS: FormStyleTokens = {
+  fontFamily: "Inter",
+  fontSize: "base",
+  labelSize: "sm",
+  textColor: "#0f172a",
+  background: "#ffffff",
+  inputBackground: "#ffffff",
+  borderColor: "#cbd5e1",
+  borderWidth: 1,
+  borderRadius: "md",
+  buttonTextColor: "#ffffff",
+  buttonBackground: "#0f172a",
+  buttonRadius: "md",
+  spacing: "comfortable",
+  fieldSpacing: "comfortable",
+  formWidth: "md",
+};
+
 export type ValidationIssue = {
   path: string;
   message: string;
@@ -72,9 +97,11 @@ const SAFE_FIELD_NAME = /^[a-z][a-z0-9_]{1,63}$/;
 
 export function validateBuilderConfig(
   config: FormBuilderConfig,
+  options: { forPublish?: boolean } = {},
 ): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
   const names = new Set<string>();
+  const forPublish = options.forPublish ?? false;
 
   if (![1, 2, 3].includes(config.columns)) {
     issues.push({ path: "columns", message: "Choose one, two, or three columns." });
@@ -84,7 +111,7 @@ export function validateBuilderConfig(
     issues.push({ path: "settings.submitLabel", message: "Submit button text is required." });
   }
 
-  if (!config.fields.length) {
+  if (forPublish && !config.fields.length) {
     issues.push({ path: "fields", message: "Add at least one field before publishing." });
   }
 
@@ -134,6 +161,7 @@ export function validateBuilderConfig(
     }
 
     if (
+      forPublish &&
       ["select", "multiselect", "radio", "checkbox"].includes(field.type) &&
       field.options.length === 0
     ) {
