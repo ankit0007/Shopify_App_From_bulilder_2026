@@ -1,0 +1,41 @@
+{% comment %}
+  Phase 1 storefront contract:
+  the public form ID is the only identifier passed from theme configuration.
+  Rendering and submission transport are implemented in the storefront phase.
+{% endcomment %}
+<div
+  class="form-builder-root"
+  data-form-builder-form-id="{{ block.settings.form_public_id | escape }}"
+  data-form-builder-status="pending"
+  role="region"
+  aria-label="{{ block.settings.accessible_label | escape }}"
+>
+  <p>{{ block.settings.placeholder_text | escape }}</p>
+</div>
+
+{% schema %}
+{
+  "name": "Form Builder form",
+  "target": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "form_public_id",
+      "label": "Form public ID",
+      "info": "Use the immutable public ID shown in the app, not the form name."
+    },
+    {
+      "type": "text",
+      "id": "accessible_label",
+      "label": "Accessible label",
+      "default": "Form"
+    },
+    {
+      "type": "text",
+      "id": "placeholder_text",
+      "label": "Loading text",
+      "default": "This form will load here."
+    }
+  ]
+}
+{% endschema %}
