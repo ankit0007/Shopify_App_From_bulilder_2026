@@ -67,6 +67,21 @@ function validateFieldValue(
   value: unknown,
   issues: SubmissionValidationIssue[],
 ) {
+  if (field.disabled) return;
+  if (
+    (field.type === "multiselect" || field.type === "checkbox") &&
+    value !== undefined &&
+    value !== null &&
+    value !== "" &&
+    !Array.isArray(value)
+  ) {
+    issues.push({ field: field.name, message: "Choose valid options." });
+    return;
+  }
+  if (value === null) {
+    issues.push({ field: field.name, message: "Enter a valid value." });
+    return;
+  }
   const normalized = normalizeFieldValue(field, value);
   if (!hasValue(normalized)) {
     if (field.required) {
@@ -87,7 +102,11 @@ function validateFieldValue(
       return;
     }
     const allowed = optionValues(field);
-    if (normalized.some((item) => !allowed.has(item))) {
+    if (
+      normalized.length > 100 ||
+      new Set(normalized).size !== normalized.length ||
+      normalized.some((item) => !allowed.has(item))
+    ) {
       issues.push({ field: field.name, message: "Choose valid options." });
     }
     return;
@@ -112,6 +131,14 @@ function validateFieldValue(
     ) {
       issues.push({ field: field.name, message: "Choose yes or no." });
     }
+    return;
+  }
+
+  if (field.type === "password") {
+    issues.push({
+      field: field.name,
+      message: "Password fields cannot be stored by this submission system.",
+    });
     return;
   }
 
@@ -143,6 +170,19 @@ function validateFieldValue(
   if (typeof normalized !== "string") {
     issues.push({ field: field.name, message: "Enter a valid value." });
     return;
+  }
+
+  if (field.type === "date" && !/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+    issues.push({ field: field.name, message: "Enter a valid date." });
+  }
+  if (field.type === "time" && !/^\d{2}:\d{2}(?::\d{2})?$/.test(normalized)) {
+    issues.push({ field: field.name, message: "Enter a valid time." });
+  }
+  if (
+    field.type === "datetime" &&
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(normalized)
+  ) {
+    issues.push({ field: field.name, message: "Enter a valid date and time." });
   }
 
   if (
@@ -343,14 +383,23 @@ export function validateSubmission(
     };
 
   const fields = new Map(form.fields.map((field) => [field.name, field]));
+  const sanitizedValues = { ...record };
   const issues: SubmissionValidationIssue[] = [];
   for (const key of Object.keys(record)) {
     if (!fields.has(key))
       issues.push({ field: key, message: "Unknown field." });
   }
-  for (const field of form.fields)
-    validateFieldValue(field, record[field.name], issues);
-  return issues.length ? { ok: false, issues } : { ok: true, values: record };
+  for (const field of form.fields) {
+    if (field.disabled) {
+      delete sanitizedValues[field.name];
+    } else if (field.hidden) {
+      sanitizedValues[field.name] = field.defaultValue;
+    }
+    validateFieldValue(field, sanitizedValues[field.name], issues);
+  }
+  return issues.length
+    ? { ok: false, issues }
+    : { ok: true, values: sanitizedValues };
 }
 
 export async function createSubmission(

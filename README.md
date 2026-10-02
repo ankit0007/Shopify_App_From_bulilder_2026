@@ -85,6 +85,9 @@ resolves only a tenant-matched published version using the immutable
 `Form.publicId`; draft and disabled forms fail safely. Storefront submissions
 are validated server-side, reject unknown fields and oversized payloads, and
 are pinned to the exact published `FormVersion` used for validation.
+Password fields remain rejected at submission time because plaintext password
+retention is not implemented. Development uses a small in-memory submission
+throttle; production requires a shared Redis/equivalent limiter.
 
 The admin `/app/submissions` page is tenant-scoped and paginated. Values are
 rendered as escaped text, never trusted HTML. App Proxy activation, production

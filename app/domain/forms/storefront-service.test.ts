@@ -93,6 +93,59 @@ describe("storefront submissions", () => {
     );
   });
 
+  it("rejects scalar multi-select values and persistent password values", () => {
+    const form = {
+      ...baseForm,
+      fields: [
+        {
+          ...baseForm.fields[0],
+          type: "multiselect" as const,
+          name: "topics",
+          required: false,
+          options: [{ label: "A", value: "a" }],
+        },
+        {
+          ...baseForm.fields[0],
+          type: "password" as const,
+          name: "secret",
+          required: false,
+        },
+      ],
+    };
+    const result = validateSubmission(form, { topics: "a", secret: "value" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.issues).toHaveLength(2);
+  });
+
+  it("does not trust submitted hidden values and ignores disabled fields", () => {
+    const form = {
+      ...baseForm,
+      fields: [
+        {
+          ...baseForm.fields[0],
+          name: "token",
+          hidden: true,
+          required: true,
+          defaultValue: "server-value",
+        },
+        {
+          ...baseForm.fields[0],
+          name: "disabled_name",
+          disabled: true,
+          required: true,
+        },
+      ],
+    };
+    const result = validateSubmission(form, {
+      token: "attacker-value",
+      disabled_name: "ignored",
+    });
+    expect(result).toEqual({
+      ok: true,
+      values: { token: "server-value" },
+    });
+  });
+
   it("resolves only the current published version for the tenant", async () => {
     const db = {
       form: {

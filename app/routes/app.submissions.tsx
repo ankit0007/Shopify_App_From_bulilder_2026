@@ -8,7 +8,11 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const { session } = await authenticate.admin(request);
   const shop = await getOrCreateShop(db, session.shop);
   const url = new URL(request.url);
-  const page = Math.max(1, Number(url.searchParams.get("page") || 1));
+  const requestedPage = Number(url.searchParams.get("page") || 1);
+  const page =
+    Number.isSafeInteger(requestedPage) && requestedPage >= 1
+      ? Math.min(requestedPage, 100_000)
+      : 1;
   const formId = url.searchParams.get("formId") || "";
   const pageSize = 20;
   const where = { shopId: shop.id, ...(formId ? { formId } : {}) };
@@ -42,6 +46,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
       })),
     })),
     forms,
+    formId,
     page,
     pageSize,
     total,
@@ -49,9 +54,11 @@ export async function loader({ request }: LoaderFunctionArgs) {
 }
 
 export default function SubmissionsPage() {
-  const { submissions, forms, page, pageSize, total } =
+  const { submissions, forms, formId, page, pageSize, total } =
     useLoaderData<typeof loader>();
   const pages = Math.max(1, Math.ceil(total / pageSize));
+  const pageLink = (nextPage: number) =>
+    `?page=${nextPage}${formId ? `&formId=${encodeURIComponent(formId)}` : ""}`;
   const formatValue = (value: unknown) =>
     typeof value === "string" ? value : JSON.stringify(value);
   return (
@@ -76,7 +83,7 @@ export default function SubmissionsPage() {
             Filter by form
             <select
               name="formId"
-              defaultValue=""
+              defaultValue={formId}
               className="mt-1.5 block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
             >
               <option value="">All forms</option>
@@ -149,7 +156,7 @@ export default function SubmissionsPage() {
             <div className="flex gap-2">
               {page > 1 && (
                 <Link
-                  to={`?page=${page - 1}`}
+                  to={pageLink(page - 1)}
                   className="rounded-lg border border-slate-200 bg-white px-3 py-2 font-medium text-slate-700"
                 >
                   Previous
@@ -157,7 +164,7 @@ export default function SubmissionsPage() {
               )}
               {page < pages && (
                 <Link
-                  to={`?page=${page + 1}`}
+                  to={pageLink(page + 1)}
                   className="rounded-lg border border-slate-200 bg-white px-3 py-2 font-medium text-slate-700"
                 >
                   Next

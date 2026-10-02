@@ -67,6 +67,7 @@ model Form {
   notifications Notification[]
 
   @@unique([shopId, name])
+  @@unique([shopId, id])
   @@index([shopId, status])
 }
 
@@ -86,6 +87,7 @@ model FormVersion {
   submissions Submission[]
 
   @@unique([formId, version])
+  @@unique([formId, id])
 }
 
 model FormField {
@@ -145,8 +147,8 @@ model Submission {
   metadata    Json?
   createdAt   DateTime               @default(now())
   shop        Shop                   @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  form        Form                   @relation(fields: [formId], references: [id], onDelete: Cascade)
-  formVersion FormVersion            @relation(fields: [formVersionId], references: [id], onDelete: Restrict)
+  form        Form                   @relation(fields: [shopId, formId], references: [shopId, id], onDelete: Cascade)
+  formVersion FormVersion            @relation(fields: [formId, formVersionId], references: [formId, id], onDelete: Restrict)
   values      SubmissionFieldValue[]
   files       FileAsset[]
 

@@ -71,11 +71,14 @@ source of truth for schema changes. Files store an opaque storage key rather tha
 user-controlled paths. Secrets belong in environment variables and are excluded
 from Git. Submissions are pinned to the published `FormVersion` used for
 validation. Unexpected fields and oversized payloads are rejected; CAPTCHA,
-rate limiting, notifications, uploads, analytics, and integrations remain
-deferred. The compliance route remains HMAC-verified. Shop redaction removes
-tenant data, while customer-level requests require a future customer
-identity/retention policy because anonymous submission values are not linked to
-Shopify customer records.
+notifications, uploads, analytics, and integrations remain deferred. A
+development-only in-memory submission limiter is enabled outside production;
+production must inject a shared Redis/equivalent limiter before relying on
+request throttling. Password fields are rejected at submission time because
+plaintext password retention is not implemented. The compliance route remains
+HMAC-verified. Shop redaction removes tenant data, while customer-level
+requests require a future customer identity/retention policy because anonymous
+submission values are not linked to Shopify customer records.
 
 The app proxy URL, app block availability, production URLs, compliance
 subscriptions, and extension deployment require Shopify Partner Dashboard

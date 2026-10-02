@@ -1,8 +1,3 @@
-{% comment %}
-  Phase 1 storefront contract:
-  the public form ID is the only identifier passed from theme configuration.
-  Rendering and submission transport are implemented in the storefront phase.
-{% endcomment %}
 <div
   class="formbuilder-block"
   data-form-builder-form-id="{{ block.settings.form_public_id | escape }}"
@@ -10,7 +5,11 @@
   role="region"
   aria-label="{{ block.settings.accessible_label | escape }}"
 >
-  <p class="formbuilder-loading">{{ block.settings.loading_text | escape }}</p>
+  {% if block.settings.form_public_id == blank %}
+    <p class="formbuilder-loading">Choose a form public ID in the block settings.</p>
+  {% else %}
+    <p class="formbuilder-loading">{{ block.settings.loading_text | escape }}</p>
+  {% endif %}
 </div>
 {{ 'form-builder.js' | asset_url | script_tag }}
 {{ 'form-builder.css' | asset_url | stylesheet_tag }}

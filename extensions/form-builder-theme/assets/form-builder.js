@@ -38,11 +38,14 @@
     root.style.setProperty("--formbuilder-button-text", style.buttonTextColor);
     root.style.setProperty("--formbuilder-button-radius", "var(--formbuilder-radius-" + style.buttonRadius + ")");
     root.style.setProperty("--formbuilder-font-family", style.fontFamily);
+    root.style.setProperty("--formbuilder-font-size", style.fontSize === "sm" ? "0.875rem" : style.fontSize === "lg" ? "1.125rem" : "1rem");
+    root.style.setProperty("--formbuilder-form-width", style.formWidth === "sm" ? "32rem" : style.formWidth === "lg" ? "56rem" : style.formWidth === "full" ? "100%" : "48rem");
+    root.style.setProperty("--formbuilder-gap", style.fieldSpacing === "compact" ? "0.6rem" : style.fieldSpacing === "spacious" ? "1.5rem" : "1rem");
   }
 
   function makeControl(field, describedBy) {
     var control;
-    var type = field.type === "url" ? "url" : field.type;
+    var type = field.type === "phone" ? "tel" : field.type;
     if (type === "textarea") {
       control = element("textarea", "formbuilder-control");
       if (field.rows) control.rows = field.rows;
@@ -63,9 +66,33 @@
     control.id = "formbuilder-" + field.name;
     control.disabled = Boolean(field.disabled);
     control.required = Boolean(field.required);
+    if (field.type === "phone") control.inputMode = "tel";
     if (field.placeholder && "placeholder" in control) control.placeholder = field.placeholder;
-    if (field.defaultValue && type !== "checkbox" && type !== "radio") {
+    if (field.defaultValue && type !== "checkbox" && type !== "radio" && type !== "multiselect") {
       control.value = field.defaultValue;
+    }
+    if (type === "select" && !field.defaultValue) {
+      var prompt = element("option");
+      prompt.value = "";
+      prompt.textContent = "Select an option";
+      prompt.disabled = Boolean(field.required);
+      prompt.selected = true;
+      control.insertBefore(prompt, control.firstChild);
+    }
+    if (type === "multiselect" && field.defaultValue) {
+      var defaults;
+      try {
+        defaults = JSON.parse(field.defaultValue);
+      } catch (_error) {
+        defaults = field.defaultValue.split(",").map(function (value) {
+          return value.trim();
+        });
+      }
+      if (Array.isArray(defaults)) {
+        Array.prototype.forEach.call(control.options, function (option) {
+          option.selected = defaults.indexOf(option.value) !== -1;
+        });
+      }
     }
     if (describedBy) control.setAttribute("aria-describedby", describedBy);
     return control;
@@ -73,6 +100,7 @@
 
   function renderChoice(field, describedBy) {
     var group = element("div", "formbuilder-choice-group");
+    group.setAttribute("role", "group");
     group.setAttribute("aria-describedby", describedBy);
     var options = field.type === "yes_no"
       ? [{ label: "Yes", value: "yes" }, { label: "No", value: "no" }]
@@ -94,20 +122,75 @@
     return group;
   }
 
-  function renderField(field) {
+  function clearFieldErrors(form) {
+    form.querySelectorAll("[data-formbuilder-error]").forEach(function (error) {
+      error.remove();
+    });
+    form.querySelectorAll("[aria-invalid='true']").forEach(function (control) {
+      control.removeAttribute("aria-invalid");
+      var describedBy = (control.getAttribute("aria-describedby") || "")
+        .split(/\s+/)
+        .filter(function (id) {
+          return id && !id.endsWith("-error");
+        });
+      if (describedBy.length) control.setAttribute("aria-describedby", describedBy.join(" "));
+      else control.removeAttribute("aria-describedby");
+    });
+  }
+
+  function showFieldErrors(form, issues) {
+    var firstInvalid = null;
+    (Array.isArray(issues) ? issues : []).forEach(function (issue) {
+      if (!issue.field) return;
+      var field = Array.prototype.find.call(
+        form.querySelectorAll(".formbuilder-field"),
+        function (candidate) {
+          return candidate.dataset.formbuilderField === issue.field;
+        },
+      );
+      if (!field) return;
+      var control = field.querySelector("input, textarea, select");
+      if (!control) return;
+      var error = element("span", "formbuilder-error");
+      error.id = control.id + "-error";
+      error.dataset.formbuilderError = "true";
+      error.textContent = issue.message;
+      control.setAttribute("aria-invalid", "true");
+      var describedBy = (control.getAttribute("aria-describedby") || "")
+        .split(/\s+/)
+        .filter(Boolean);
+      if (describedBy.indexOf(error.id) === -1) describedBy.push(error.id);
+      control.setAttribute("aria-describedby", describedBy.join(" "));
+      field.appendChild(error);
+      if (!firstInvalid) firstInvalid = control;
+    });
+    if (firstInvalid) firstInvalid.focus();
+  }
+
+  function renderField(field, columns, instanceKey) {
     var wrapper = element("div", "formbuilder-field");
-    wrapper.style.gridColumn = "span " + Math.max(1, Math.min(12, field.width));
+    var span = Math.max(1, Math.min(columns, Math.round((field.width / 12) * columns)));
+    wrapper.style.gridColumn = Math.max(1, field.column) + " / span " + span;
+    wrapper.style.gridRow = String(Math.max(1, field.row));
     wrapper.dataset.formbuilderRow = String(field.row);
-    var describedBy = "formbuilder-description-" + field.name;
+    wrapper.dataset.formbuilderField = field.name;
+    var controlId = "formbuilder-" + instanceKey + "-" + field.name;
+    var describedBy = controlId + "-description";
     if (field.type === "hidden" || field.hidden) {
-      var hidden = makeControl(field);
+      var hidden = makeControl(field, describedBy);
+      hidden.id = controlId;
       hidden.type = "hidden";
       wrapper.appendChild(hidden);
       return wrapper;
     }
 
-    var label = element("label", "formbuilder-label");
-    label.htmlFor = "formbuilder-" + field.id;
+    var isChoice = field.type === "radio" || field.type === "checkbox" || field.type === "yes_no";
+    var label = element(isChoice ? "legend" : "label", "formbuilder-label");
+    if (isChoice) {
+      label.id = controlId + "-label";
+    } else {
+      label.htmlFor = controlId;
+    }
     label.textContent = field.label;
     if (field.required) {
       var required = element("span", "formbuilder-required");
@@ -115,7 +198,13 @@
       required.setAttribute("aria-hidden", "true");
       label.appendChild(required);
     }
-    wrapper.appendChild(label);
+    if (isChoice) {
+      var fieldset = element("fieldset", "formbuilder-fieldset");
+      fieldset.appendChild(label);
+      wrapper.appendChild(fieldset);
+    } else {
+      wrapper.appendChild(label);
+    }
     if (field.description) {
       var description = setAttributes(element("span", "formbuilder-description"), {
         id: describedBy,
@@ -128,7 +217,16 @@
       field.type === "radio" || field.type === "checkbox" || field.type === "yes_no"
         ? renderChoice(field, field.description ? describedBy : undefined)
         : makeControl(field, field.description ? describedBy : undefined);
-    wrapper.appendChild(control);
+    if (isChoice) {
+      control.setAttribute("aria-labelledby", label.id);
+    } else {
+      control.id = controlId;
+    }
+    if (isChoice) {
+      wrapper.querySelector("fieldset").appendChild(control);
+    } else {
+      wrapper.appendChild(control);
+    }
     return wrapper;
   }
 
@@ -149,10 +247,11 @@
     var form = element("form", "formbuilder-form");
     form.noValidate = false;
     form.setAttribute("aria-label", root.getAttribute("aria-label") || "Form");
+    form.style.setProperty("--formbuilder-columns", String(payload.form.columns));
     styleForm(form, payload.form.style);
     var fields = element("div", "formbuilder-fields");
     payload.form.fields.forEach(function (field) {
-      fields.appendChild(renderField(field));
+      fields.appendChild(renderField(field, payload.form.columns, root.dataset.formBuilderInstance));
     });
     form.appendChild(fields);
     var actions = element("div", "formbuilder-actions");
@@ -167,6 +266,7 @@
     form.addEventListener("submit", function (event) {
       event.preventDefault();
       messages.textContent = "";
+      clearFieldErrors(form);
       submit.disabled = true;
       fetch(root.dataset.formBuilderEndpoint + "/" + encodeURIComponent(root.dataset.formBuilderFormId), {
         method: "POST",
@@ -184,6 +284,7 @@
           form.reset();
         })
         .catch(function (body) {
+          showFieldErrors(form, body && body.issues);
           messages.textContent = body.error || payload.form.settings.errorMessage;
         })
         .finally(function () {
@@ -193,7 +294,10 @@
     root.appendChild(form);
   }
 
-  document.querySelectorAll("[data-form-builder-form-id]").forEach(function (root) {
+  document.querySelectorAll("[data-form-builder-form-id]").forEach(function (root, index) {
+    if (root.dataset.formBuilderInitialized === "true") return;
+    root.dataset.formBuilderInitialized = "true";
+    root.dataset.formBuilderInstance = String(index);
     var endpoint = root.dataset.formBuilderEndpoint;
     var publicId = root.dataset.formBuilderFormId;
     if (!endpoint || !publicId) return;

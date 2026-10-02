@@ -12,18 +12,25 @@
 
 .formbuilder-form {
   box-sizing: border-box;
+  font-size: var(--formbuilder-font-size, 1rem);
   margin: 0 auto;
-  max-width: 48rem;
+  max-width: var(--formbuilder-form-width, 48rem);
 }
 
 .formbuilder-fields {
   display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(var(--formbuilder-columns, 1), minmax(0, 1fr));
+  gap: var(--formbuilder-gap, 1rem);
 }
 
 .formbuilder-field {
   min-width: 0;
+}
+
+.formbuilder-fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
 }
 
 .formbuilder-label,
@@ -38,6 +45,7 @@
 }
 
 .formbuilder-description {
+  color: rgba(15, 23, 42, 0.68);
   color: color-mix(in srgb, currentColor 68%, transparent);
   font-size: 0.8125rem;
   margin-bottom: 0.4rem;

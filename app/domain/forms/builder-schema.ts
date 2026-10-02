@@ -101,6 +101,7 @@ const SAFE_FIELD_NAME = /^[a-z][a-z0-9_]{1,63}$/;
 const SAFE_FIELD_ID = /^[A-Za-z0-9_-]{1,100}$/;
 const SAFE_OPTION_VALUE = /^[A-Za-z0-9_-]{1,64}$/;
 const SAFE_COLOR = /^#[0-9A-Fa-f]{6}$/;
+const SAFE_FONT_FAMILY = /^[A-Za-z0-9 ,"'_-]{1,80}$/;
 const FIELD_TYPES = new Set(Object.keys(FIELD_REGISTRY));
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -316,6 +317,12 @@ export function parseBuilderConfig(
     if (!SAFE_COLOR.test(value)) {
       issues.push({ path, message: "Use a six-digit hexadecimal color." });
     }
+  }
+  if (!SAFE_FONT_FAMILY.test(style.fontFamily)) {
+    issues.push({
+      path: "style.fontFamily",
+      message: "Use a safe font family name.",
+    });
   }
 
   const rawFields = input.fields;
