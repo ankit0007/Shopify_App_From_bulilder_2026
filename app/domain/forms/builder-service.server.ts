@@ -1,9 +1,10 @@
-import type { Prisma, PrismaClient } from "@prisma/client";
+import { Prisma, type PrismaClient } from "@prisma/client";
 import {
   DEFAULT_FORM_SETTINGS,
   DEFAULT_STYLE_TOKENS,
   type BuilderField,
   type FormBuilderConfig,
+  parseBuilderConfig,
   validateBuilderConfig,
 } from "./builder-schema";
 import type { BuilderFieldType } from "./field-registry";
@@ -35,6 +36,29 @@ const DB_TYPE_TO_FIELD = Object.fromEntries(
 
 const asJson = (value: unknown): Prisma.InputJsonValue =>
   JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
+
+async function serializableTransaction<T>(
+  db: PrismaClient,
+  callback: (tx: Prisma.TransactionClient) => Promise<T>,
+) {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      return await db.$transaction(callback, {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      });
+    } catch (error) {
+      if (
+        attempt === 0 &&
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2034"
+      ) {
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw new Error("Transaction could not be completed");
+}
 
 function fieldToData(field: BuilderField) {
   return {
@@ -141,7 +165,11 @@ export async function loadBuilderForm(
       versions: {
         orderBy: { version: "desc" },
         take: 1,
-        include: { fields: true, layout: true, style: true },
+        include: {
+          fields: { orderBy: { position: "asc" } },
+          layout: true,
+          style: true,
+        },
       },
     },
   });
@@ -164,16 +192,21 @@ export async function saveBuilderDraft(
   input: {
     shopId: string;
     formId: string;
-    config: FormBuilderConfig;
+    config: unknown;
     name?: string;
   },
 ) {
-  const issues = validateBuilderConfig(input.config);
+  const parsed = parseBuilderConfig(input.config);
+  if (!parsed.ok) {
+    return parsed;
+  }
+  const config = parsed.config;
+  const issues = validateBuilderConfig(config);
   if (issues.length) {
     return { ok: false as const, issues };
   }
 
-  return db.$transaction(async (tx) => {
+  return serializableTransaction(db, async (tx) => {
     const form = await tx.form.findFirst({
       where: { id: input.formId, shopId: input.shopId },
       include: {
@@ -181,7 +214,11 @@ export async function saveBuilderDraft(
           where: { version: { equals: undefined } },
           orderBy: { version: "desc" },
           take: 1,
-          include: { fields: true, layout: true, style: true },
+          include: {
+            fields: { orderBy: { position: "asc" } },
+            layout: true,
+            style: true,
+          },
         },
       },
     });
@@ -205,7 +242,7 @@ export async function saveBuilderDraft(
           form: { connect: { id: form.id } },
           version: nextVersion,
           isPublished: false,
-          ...configToVersionData(input.config),
+          ...configToVersionData(config),
         },
       });
       versionId = created.id;
@@ -221,11 +258,11 @@ export async function saveBuilderDraft(
       await tx.formVersion.update({
         where: { id: current.id },
         data: {
-          settings: asJson(input.config.settings),
-          layout: { update: { columns: input.config.columns } },
-          style: { update: { tokens: asJson(input.config.style) } },
+          settings: asJson(config.settings),
+          layout: { update: { columns: config.columns } },
+          style: { update: { tokens: asJson(config.style) } },
           fields: {
-            create: input.config.fields.map((field, position) => ({
+            create: config.fields.map((field, position) => ({
               ...fieldToData(field),
               position,
             })),
@@ -246,38 +283,98 @@ export async function saveBuilderDraft(
 
 export async function publishBuilderForm(
   db: PrismaClient,
-  input: { shopId: string; formId: string },
+  input: { shopId: string; formId: string; config?: unknown; name?: string },
 ) {
-  const loaded = await loadBuilderForm(db, input);
-  if (!loaded) {
-    return {
-      ok: false as const,
-      issues: [{ path: "form", message: "Form not found." }],
-    };
-  }
+  return serializableTransaction(db, async (tx) => {
+    const form = await tx.form.findFirst({
+      where: { id: input.formId, shopId: input.shopId },
+      include: {
+        versions: {
+          orderBy: { version: "desc" },
+          take: 1,
+          include: {
+            fields: { orderBy: { position: "asc" } },
+            layout: true,
+            style: true,
+          },
+        },
+      },
+    });
+    const version = form?.versions[0];
+    if (!form || !version) {
+      return {
+        ok: false as const,
+        issues: [{ path: "form", message: "Form not found." }],
+      };
+    }
+    let config: FormBuilderConfig;
+    if (input.config === undefined) {
+      config = dataToConfig(version);
+    } else {
+      const parsed = parseBuilderConfig(input.config);
+      if (!parsed.ok) return parsed;
+      config = parsed.config;
+    }
+    const issues = validateBuilderConfig(config, { forPublish: true });
+    if (issues.length) {
+      return { ok: false as const, issues };
+    }
 
-  const issues = validateBuilderConfig(loaded.config, { forPublish: true });
-  if (issues.length) {
-    return { ok: false as const, issues };
-  }
+    let versionId = version.id;
+    let versionNumber = version.version;
+    if (input.config !== undefined && version.isPublished) {
+      versionNumber = form.currentVersion + 1;
+      const created = await tx.formVersion.create({
+        data: {
+          form: { connect: { id: form.id } },
+          version: versionNumber,
+          isPublished: false,
+          ...configToVersionData(config),
+        },
+      });
+      versionId = created.id;
+      await tx.form.update({
+        where: { id: form.id },
+        data: {
+          currentVersion: versionNumber,
+          ...(input.name?.trim() ? { name: input.name.trim() } : {}),
+        },
+      });
+    } else if (input.config !== undefined) {
+      await tx.formField.deleteMany({ where: { versionId: version.id } });
+      await tx.formVersion.update({
+        where: { id: version.id },
+        data: {
+          settings: asJson(config.settings),
+          layout: { update: { columns: config.columns } },
+          style: { update: { tokens: asJson(config.style) } },
+          fields: {
+            create: config.fields.map((field, position) => ({
+              ...fieldToData(field),
+              position,
+            })),
+          },
+        },
+      });
+    }
 
-  return db.$transaction(async (tx) => {
     await tx.formVersion.updateMany({
       where: { formId: input.formId },
       data: { isPublished: false },
     });
     await tx.formVersion.update({
-      where: { id: loaded.version.id },
+      where: { id: versionId },
       data: { isPublished: true },
     });
     await tx.form.update({
       where: { id: input.formId },
       data: {
         status: "PUBLISHED",
-        publishedVersion: loaded.version.version,
+        publishedVersion: versionNumber,
+        ...(input.name?.trim() ? { name: input.name.trim() } : {}),
       },
     });
-    return { ok: true as const, publicId: loaded.form.publicId };
+    return { ok: true as const, publicId: form.publicId };
   });
 }
 

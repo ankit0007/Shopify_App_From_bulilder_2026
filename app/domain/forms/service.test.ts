@@ -38,7 +38,20 @@ describe("form service identity and tenant boundaries", () => {
           settings: {},
           layout: { columns: 1 },
           style: { tokens: {} },
-          fields: [],
+          fields: [
+            {
+              key: "name",
+              label: "Name",
+              type: "TEXT",
+              position: 0,
+              row: 4,
+              column: 1,
+              width: 12,
+              required: false,
+              configuration: {},
+              validation: null,
+            },
+          ],
         },
       ],
     });
@@ -56,6 +69,9 @@ describe("form service identity and tenant boundaries", () => {
     expect(original.publicId).not.toBe(duplicate.publicId);
     expect(original.shortcode).toBe("[form:first]");
     expect(duplicate.shortcode).toBe("[form:second]");
+    expect(
+      db.form.create.mock.calls[1][0].data.versions.create.fields.create[0].row,
+    ).toBe(4);
     expect(db.form.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: "one", shopId: "shop-a" } }),
     );
@@ -89,5 +105,17 @@ describe("form service identity and tenant boundaries", () => {
 
     expect(result).toBeNull();
     expect(db.form.findFirst).not.toHaveBeenCalled();
+  });
+
+  it("resolves trimmed shortcodes through the shared parser", async () => {
+    const db = fakeDatabase();
+    db.form.findFirst.mockResolvedValue({ id: "form-a", publicId: "184729" });
+
+    await expect(
+      resolveFormByShortcode(db as never, {
+        shopId: "shop-a",
+        shortcode: "  [form:184729]  ",
+      }),
+    ).resolves.toEqual({ id: "form-a", publicId: "184729" });
   });
 });

@@ -2,6 +2,7 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { redirect, useFetcher, useLoaderData } from "react-router";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
+import { isUniqueConstraintError } from "../db-errors.server";
 import {
   deleteBuilderForm,
   duplicateBuilderForm,
@@ -44,7 +45,14 @@ export async function action({ request }: ActionFunctionArgs) {
   }
   if (intent === "duplicate") {
     const name = String(formData.get("name") ?? "Form copy").trim();
-    await duplicateBuilderForm(db, { shopId: shop.id, formId, name });
+    try {
+      await duplicateBuilderForm(db, { shopId: shop.id, formId, name });
+    } catch (error) {
+      if (isUniqueConstraintError(error)) {
+        return { error: "A form with this name already exists." };
+      }
+      throw error;
+    }
   }
   return redirect("/app/forms");
 }
@@ -73,6 +81,11 @@ export default function FormsPage() {
             Create form
           </a>
         </div>
+        {fetcher.data?.error && (
+          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            {fetcher.data.error}
+          </div>
+        )}
         <div className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           {forms.length ? (
             <div className="divide-y divide-slate-100">

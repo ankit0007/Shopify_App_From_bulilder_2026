@@ -2,6 +2,7 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { Form, redirect, useActionData } from "react-router";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
+import { isUniqueConstraintError } from "../db-errors.server";
 import { createForm } from "../domain/forms/service.server";
 import { getOrCreateShop } from "../domain/forms/tenant.server";
 
@@ -21,11 +22,19 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 
   const shop = await getOrCreateShop(db, session.shop);
-  const form = await createForm(db, {
-    shopId: shop.id,
-    name,
-    title: title || undefined,
-  });
+  let form;
+  try {
+    form = await createForm(db, {
+      shopId: shop.id,
+      name,
+      title: title || undefined,
+    });
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      return { error: "A form with this name already exists." };
+    }
+    throw error;
+  }
   return redirect(`/app/forms/${form.id}`);
 }
 

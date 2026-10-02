@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_FORM_SETTINGS,
   DEFAULT_STYLE_TOKENS,
+  parseBuilderConfig,
   type FormBuilderConfig,
   validateBuilderConfig,
 } from "./builder-schema";
@@ -84,5 +85,32 @@ describe("form builder schema", () => {
     expect(validateBuilderConfig(config, { forPublish: true })).toEqual([
       { path: "fields.0.options", message: "Add at least one option." },
     ]);
+  });
+
+  it("rejects malformed runtime payloads instead of throwing", () => {
+    expect(parseBuilderConfig(null).ok).toBe(false);
+    expect(parseBuilderConfig([]).ok).toBe(false);
+    expect(
+      parseBuilderConfig({ columns: 1, settings: {}, style: {}, fields: [] })
+        .ok,
+    ).toBe(false);
+  });
+
+  it("rejects duplicate field IDs and unsafe option values", () => {
+    const config = validConfig(1);
+    const payload = {
+      ...config,
+      fields: [
+        { ...config.fields[0], options: [{ label: "A", value: "bad value" }] },
+        { ...config.fields[0], label: "Second" },
+      ],
+    };
+    const result = parseBuilderConfig(payload);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.issues.map((issue) => issue.path)).toEqual(
+        expect.arrayContaining(["fields.0.options.0.value", "fields.1.id"]),
+      );
+    }
   });
 });

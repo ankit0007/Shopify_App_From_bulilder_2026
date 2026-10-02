@@ -2,6 +2,8 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { redirect, useLoaderData, useRouteError } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { BuilderShell } from "../components/form-builder/builder-shell";
+import { isUniqueConstraintError } from "../db-errors.server";
+import { parseBuilderConfig } from "../domain/forms/builder-schema";
 import {
   deleteBuilderForm,
   duplicateBuilderForm,
@@ -44,33 +46,94 @@ export async function action({ request, params }: ActionFunctionArgs) {
   const formId = String(params.formId);
   const formData = await request.formData();
   const intent = String(formData.get("intent") ?? "");
+  const rawPayload = String(formData.get("payload") ?? "{}");
+  if (rawPayload.length > 1_000_000) {
+    return { ok: false, error: "Form payload is too large." };
+  }
   let payload: {
     name?: string;
     config?: Parameters<typeof saveBuilderDraft>[1]["config"];
   };
   try {
-    payload = JSON.parse(String(formData.get("payload") ?? "{}"));
+    payload = JSON.parse(rawPayload);
   } catch {
     return { ok: false, error: "Invalid form payload." };
   }
 
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return {
+      ok: false,
+      issues: [{ path: "payload", message: "Form payload must be an object." }],
+    };
+  }
+  const safeName =
+    payload.name === undefined
+      ? undefined
+      : typeof payload.name === "string"
+        ? payload.name.trim()
+        : null;
+  if (
+    safeName === null ||
+    (safeName !== undefined && (safeName.length < 2 || safeName.length > 120))
+  ) {
+    return {
+      ok: false,
+      issues: [
+        {
+          path: "name",
+          message: "Form name must be between 2 and 120 characters.",
+        },
+      ],
+    };
+  }
+
   if (intent === "save" || intent === "publish") {
-    if (!payload.config) {
-      return {
-        ok: false,
-        issues: [{ path: "config", message: "Form configuration is missing." }],
-      };
-    }
-    const saved = await saveBuilderDraft(db, {
-      shopId: shop.id,
-      formId,
-      config: payload.config,
-      name: payload.name,
-    });
-    if (!saved.ok) return saved;
+    const parsed = parseBuilderConfig(payload.config);
+    if (!parsed.ok) return parsed;
     if (intent === "publish") {
-      return publishBuilderForm(db, { shopId: shop.id, formId });
+      try {
+        return await publishBuilderForm(db, {
+          shopId: shop.id,
+          formId,
+          config: parsed.config,
+          name: safeName ?? undefined,
+        });
+      } catch (error) {
+        if (isUniqueConstraintError(error)) {
+          return {
+            ok: false,
+            issues: [
+              {
+                path: "name",
+                message: "A form with this name already exists.",
+              },
+            ],
+          };
+        }
+        throw error;
+      }
     }
+
+    let saved;
+    try {
+      saved = await saveBuilderDraft(db, {
+        shopId: shop.id,
+        formId,
+        config: parsed.config,
+        name: safeName ?? undefined,
+      });
+    } catch (error) {
+      if (isUniqueConstraintError(error)) {
+        return {
+          ok: false,
+          issues: [
+            { path: "name", message: "A form with this name already exists." },
+          ],
+        };
+      }
+      throw error;
+    }
+    if (!saved.ok) return saved;
     return saved;
   }
 
@@ -85,11 +148,18 @@ export async function action({ request, params }: ActionFunctionArgs) {
   }
 
   if (intent === "duplicate") {
-    await duplicateBuilderForm(db, {
-      shopId: shop.id,
-      formId,
-      name: payload.name?.trim() || "Form copy",
-    });
+    try {
+      await duplicateBuilderForm(db, {
+        shopId: shop.id,
+        formId,
+        name: safeName || "Form copy",
+      });
+    } catch (error) {
+      if (isUniqueConstraintError(error)) {
+        return { ok: false, error: "A form with this name already exists." };
+      }
+      throw error;
+    }
     return redirect("/app/forms");
   }
 

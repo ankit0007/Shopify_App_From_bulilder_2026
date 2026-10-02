@@ -95,7 +95,7 @@ describe("builder service tenant boundaries", () => {
 
   it("publishes a validated version and records the published version", async () => {
     const db = fakeDatabase();
-    db.form.findFirst.mockResolvedValue({
+    const formRecord = {
       id: "form-a",
       publicId: "public-a",
       name: "Contact",
@@ -125,13 +125,17 @@ describe("builder service tenant boundaries", () => {
           ],
         },
       ],
-    });
+    };
+    db.form.findFirst.mockResolvedValue(formRecord);
     const tx = {
       formVersion: {
         updateMany: vi.fn(),
         update: vi.fn(),
       },
-      form: { update: vi.fn() },
+      form: {
+        findFirst: vi.fn().mockResolvedValue(formRecord),
+        update: vi.fn(),
+      },
     };
     db.$transaction.mockImplementation(async (callback) => callback(tx));
 

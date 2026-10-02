@@ -1,7 +1,7 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { DEFAULT_FORM_SETTINGS, DEFAULT_STYLE_TOKENS } from "./builder-schema";
 import { newFormPublicId } from "./ids";
-import { createFormShortcode } from "./shortcode";
+import { createFormShortcode, parseFormShortcode } from "./shortcode";
 
 type Database = PrismaClient | Prisma.TransactionClient;
 
@@ -47,7 +47,11 @@ export async function duplicateForm(
       versions: {
         orderBy: { version: "desc" },
         take: 1,
-        include: { fields: true, layout: true, style: true },
+        include: {
+          fields: { orderBy: { position: "asc" } },
+          layout: true,
+          style: true,
+        },
       },
     },
   });
@@ -81,6 +85,7 @@ export async function duplicateForm(
               label: field.label,
               type: field.type,
               position: field.position,
+              row: field.row,
               column: field.column,
               width: field.width,
               required: field.required,
@@ -101,9 +106,8 @@ export async function resolveFormByShortcode(
   db: Database,
   input: { shopId: string; shortcode: string },
 ) {
-  const publicId = input.shortcode.startsWith("[form:")
-    ? input.shortcode.slice(6, -1)
-    : input.shortcode;
+  const value = input.shortcode.trim();
+  const publicId = parseFormShortcode(value) ?? value;
 
   if (!/^[A-Za-z0-9_-]+$/.test(publicId)) {
     return null;
