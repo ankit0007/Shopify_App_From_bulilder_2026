@@ -83,6 +83,7 @@ model FormVersion {
   createdAt   DateTime     @default(now())
   form        Form         @relation(fields: [formId], references: [id], onDelete: Cascade)
   fields      FormField[]
+  submissions Submission[]
 
   @@unique([formId, version])
 }
@@ -137,6 +138,7 @@ model Submission {
   id          String                 @id @default(cuid())
   shopId      String
   formId      String
+  formVersionId String
   status      SubmissionStatus      @default(NEW)
   source      String?
   utm         Json?
@@ -144,10 +146,12 @@ model Submission {
   createdAt   DateTime               @default(now())
   shop        Shop                   @relation(fields: [shopId], references: [id], onDelete: Cascade)
   form        Form                   @relation(fields: [formId], references: [id], onDelete: Cascade)
+  formVersion FormVersion            @relation(fields: [formVersionId], references: [id], onDelete: Restrict)
   values      SubmissionFieldValue[]
   files       FileAsset[]
 
   @@index([shopId, formId, createdAt])
+  @@index([formVersionId])
 }
 
 model SubmissionFieldValue {
