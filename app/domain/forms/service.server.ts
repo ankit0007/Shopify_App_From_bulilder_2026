@@ -83,7 +83,7 @@ export async function duplicateForm(
               column: field.column,
               width: field.width,
               required: field.required,
-              configuration: field.configuration,
+              configuration: field.configuration ?? {},
               validation: field.validation ?? undefined,
             })),
           },

@@ -57,6 +57,7 @@ model Form {
   title         String?
   status        FormStatus   @default(DRAFT)
   currentVersion Int          @default(1)
+  publishedVersion Int?
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   shop          Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
@@ -78,6 +79,7 @@ model FormVersion {
   style       FormStyle    @relation(fields: [styleId], references: [id], onDelete: Restrict)
   styleId     String
   settings    Json
+  isPublished Boolean      @default(false)
   createdAt   DateTime     @default(now())
   form        Form         @relation(fields: [formId], references: [id], onDelete: Cascade)
   fields      FormField[]
@@ -92,6 +94,7 @@ model FormField {
   label         String
   type          FieldType
   position      Int
+  row           Int         @default(1)
   column        Int         @default(1)
   width         Int         @default(12)
   required      Boolean     @default(false)
@@ -100,7 +103,7 @@ model FormField {
   version       FormVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
 
   @@unique([versionId, key])
-  @@index([versionId, position])
+  @@index([versionId, row, position])
 }
 
 model FormLayout {
@@ -233,11 +236,19 @@ enum FieldType {
   TEXT
   EMAIL
   PHONE
+  NUMBER
+  URL
+  PASSWORD
   TEXTAREA
   SELECT
+  MULTISELECT
   RADIO
   CHECKBOX
+  YES_NO
+  HIDDEN
   DATE
+  TIME
+  DATETIME
   FILE
   HEADING
   PARAGRAPH

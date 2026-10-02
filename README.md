@@ -63,3 +63,12 @@ Included: official Shopify app foundation, PostgreSQL Prisma schema, tenant rela
 Not included: the visual editor, complete submission handling, email/file processing, analytics, integrations, billing enforcement, or storefront rendering. Those are subsequent phases.
 
 See [`docs/architecture.md`](docs/architecture.md) for boundaries and decisions.
+
+## Production server safety
+
+The production deployment is designed to coexist with other applications on
+`formbuilder.it3.in`. It uses a dedicated directory, Compose project,
+PostgreSQL database, environment file, service, and reverse-proxy route. It
+must never overwrite an existing site or service. See
+[`docs/deployment.md`](docs/deployment.md) for the isolation contract and
+pre-deployment inventory checklist.
