@@ -10,23 +10,7 @@ import { parseFormShortcode } from "./shortcode";
 const MAX_SUBMISSION_BYTES = 64 * 1024;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-type PublicField = Pick<
-  BuilderField,
-  | "type"
-  | "label"
-  | "name"
-  | "description"
-  | "placeholder"
-  | "defaultValue"
-  | "required"
-  | "disabled"
-  | "hidden"
-  | "row"
-  | "column"
-  | "width"
-  | "options"
-  | "validation"
->;
+type PublicField = Omit<BuilderField, "id">;
 
 export type PublicForm = {
   publicId: string;
@@ -36,10 +20,11 @@ export type PublicForm = {
   fields: PublicField[];
 };
 
-type PublishedForm = PublicForm & {
+type PublishedForm = Omit<PublicForm, "fields"> & {
   shopId: string;
   formId: string;
   versionId: string;
+  fields: BuilderField[];
 };
 
 export type SubmissionValidationIssue = {
@@ -302,7 +287,10 @@ export async function resolvePublishedForm(
 
 export function toPublicForm(form: PublishedForm): PublicForm {
   const { shopId: _shopId, formId: _formId, versionId: _versionId, ...publicForm } = form;
-  return publicForm;
+  return {
+    ...publicForm,
+    fields: publicForm.fields.map(({ id: _id, ...field }) => field),
+  };
 }
 
 export function validateSubmission(
