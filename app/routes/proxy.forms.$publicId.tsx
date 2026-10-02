@@ -134,7 +134,3 @@ export async function action({ request, params }: ActionFunctionArgs) {
     return jsonError("We could not submit the form. Please try again.", 400);
   }
 }
-
-export default function ProxyFormRoute() {
-  return null;
-}
