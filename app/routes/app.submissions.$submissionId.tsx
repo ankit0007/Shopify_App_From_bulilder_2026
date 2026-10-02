@@ -54,7 +54,10 @@ export async function action({ request, params }: ActionFunctionArgs) {
 export default function SubmissionDetailPage() {
   const submission = useLoaderData<typeof loader>();
   const labels = new Map(
-    submission.fields.map((field) => [field.key, `${field.label} (${field.type})`]),
+    submission.fields.map((field) => [
+      field.key,
+      `${field.label} (${field.type})`,
+    ]),
   );
   const formatValue = (value: unknown) =>
     typeof value === "string" ? value : JSON.stringify(value);

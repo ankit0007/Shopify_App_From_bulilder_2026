@@ -160,7 +160,8 @@ function validateFieldValue(
   if (field.type === "email" && !EMAIL_PATTERN.test(normalized)) {
     issues.push({
       field: field.name,
-      message: field.validation.invalidMessage || "Enter a valid email address.",
+      message:
+        field.validation.invalidMessage || "Enter a valid email address.",
     });
   }
   if (field.type === "url") {
@@ -183,7 +184,10 @@ function validateFieldValue(
         });
       }
     } catch {
-      issues.push({ field: field.name, message: "Field validation is invalid." });
+      issues.push({
+        field: field.name,
+        message: "Field validation is invalid.",
+      });
     }
   }
 }
@@ -227,12 +231,19 @@ function versionToConfig(version: {
             .map((option) => {
               const record = asRecord(option);
               return record
-                ? { label: String(record.label ?? ""), value: String(record.value ?? "") }
+                ? {
+                    label: String(record.label ?? ""),
+                    value: String(record.value ?? ""),
+                  }
                 : null;
             })
-            .filter((option): option is { label: string; value: string } => option !== null)
+            .filter(
+              (option): option is { label: string; value: string } =>
+                option !== null,
+            )
         : [],
-      validation: (asRecord(field.validation) ?? {}) as BuilderField["validation"],
+      validation: (asRecord(field.validation) ??
+        {}) as BuilderField["validation"],
     };
   });
   const parsed = parseBuilderConfig({
@@ -270,7 +281,12 @@ export async function resolvePublishedForm(
   });
   const version = form?.versions[0];
   const config = version ? versionToConfig(version) : null;
-  if (!form || !version || !config || form.publishedVersion !== version.version) {
+  if (
+    !form ||
+    !version ||
+    !config ||
+    form.publishedVersion !== version.version
+  ) {
     return null;
   }
   return {
@@ -286,29 +302,54 @@ export async function resolvePublishedForm(
 }
 
 export function toPublicForm(form: PublishedForm): PublicForm {
-  const { shopId: _shopId, formId: _formId, versionId: _versionId, ...publicForm } = form;
   return {
-    ...publicForm,
-    fields: publicForm.fields.map(({ id: _id, ...field }) => field),
+    publicId: form.publicId,
+    settings: form.settings,
+    style: form.style,
+    columns: form.columns,
+    fields: form.fields.map((field) => ({
+      type: field.type,
+      label: field.label,
+      name: field.name,
+      description: field.description,
+      placeholder: field.placeholder,
+      defaultValue: field.defaultValue,
+      required: field.required,
+      disabled: field.disabled,
+      hidden: field.hidden,
+      row: field.row,
+      column: field.column,
+      width: field.width,
+      options: field.options,
+      validation: field.validation,
+    })),
   };
 }
 
 export function validateSubmission(
   form: PublishedForm,
   values: unknown,
-): { ok: true; values: Record<string, unknown> } | { ok: false; issues: SubmissionValidationIssue[] } {
+):
+  | { ok: true; values: Record<string, unknown> }
+  | { ok: false; issues: SubmissionValidationIssue[] } {
   if (submissionByteLength(values) > MAX_SUBMISSION_BYTES) {
     return { ok: false, issues: [{ message: "Submission is too large." }] };
   }
   const record = asRecord(values);
-  if (!record) return { ok: false, issues: [{ message: "Submission must be an object." }] };
+  if (!record)
+    return {
+      ok: false,
+      issues: [{ message: "Submission must be an object." }],
+    };
 
   const fields = new Map(form.fields.map((field) => [field.name, field]));
   const issues: SubmissionValidationIssue[] = [];
   for (const key of Object.keys(record)) {
-    if (!fields.has(key)) issues.push({ field: key, message: "Unknown field." });
+    if (!fields.has(key))
+      issues.push({ field: key, message: "Unknown field." });
   }
-  for (const field of form.fields) validateFieldValue(field, record[field.name], issues);
+  for (const field of form.fields)
+    validateFieldValue(field, record[field.name], issues);
   return issues.length ? { ok: false, issues } : { ok: true, values: record };
 }
 
@@ -343,7 +384,11 @@ export async function createSubmission(
     },
     select: { id: true },
   });
-  return { ok: true as const, submissionId: submission.id, message: form.settings.successMessage };
+  return {
+    ok: true as const,
+    submissionId: submission.id,
+    message: form.settings.successMessage,
+  };
 }
 
 export const STOREFRONT_MAX_SUBMISSION_BYTES = MAX_SUBMISSION_BYTES;

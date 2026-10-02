@@ -43,12 +43,16 @@ tablet, and mobile preview modes use the same normalized configuration.
 
 ## Storefront placement
 
-The Phase 1 contract uses a Theme App Extension app block for inline placement.
-Later phases can add the single Shopify app proxy endpoint for dynamic data and
-submissions, plus an app embed for site-wide or floating behavior. Arbitrary
-shortcodes are not assumed to execute in Shopify themes; manual placement is
-represented as a `SHORTCODE` display surface and must be implemented through a
-Shopify-supported surface.
+The Theme App Extension app block provides inline placement. The block passes
+the immutable public ID to the app proxy endpoint configured in
+`shopify.app.toml`; the proxy resolves only the current published version and
+accepts validated submissions. The storefront bundle is a dependency-free,
+namespaced asset inside the extension and never includes the admin builder or
+Prisma client.
+
+Arbitrary shortcodes are not assumed to execute in Shopify themes. Manual
+placement is represented as a `SHORTCODE` display surface and must be
+implemented through a Shopify-supported surface.
 
 ## Authentication, webhooks, and billing
 
@@ -65,5 +69,14 @@ feature checks; it is not a payment system and does not create charges.
 PostgreSQL is the production-oriented datasource. Prisma migrations are the
 source of truth for schema changes. Files store an opaque storage key rather than
 user-controlled paths. Secrets belong in environment variables and are excluded
-from Git. Personal-data retention and customer redaction policies will be
-completed alongside submission workflows.
+from Git. Submissions are pinned to the published `FormVersion` used for
+validation. Unexpected fields and oversized payloads are rejected; CAPTCHA,
+rate limiting, notifications, uploads, analytics, and integrations remain
+deferred. The compliance route remains HMAC-verified. Shop redaction removes
+tenant data, while customer-level requests require a future customer
+identity/retention policy because anonymous submission values are not linked to
+Shopify customer records.
+
+The app proxy URL, app block availability, production URLs, compliance
+subscriptions, and extension deployment require Shopify Partner Dashboard
+verification.

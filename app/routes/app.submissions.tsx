@@ -131,9 +131,12 @@ export default function SubmissionsPage() {
             </div>
           ) : (
             <div className="px-6 py-20 text-center">
-              <h2 className="font-semibold text-slate-900">No submissions yet</h2>
+              <h2 className="font-semibold text-slate-900">
+                No submissions yet
+              </h2>
               <p className="mx-auto mt-2 max-w-sm text-sm text-slate-500">
-                Responses will appear here when customers submit a published form.
+                Responses will appear here when customers submit a published
+                form.
               </p>
             </div>
           )}

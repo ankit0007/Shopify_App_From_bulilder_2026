@@ -12,8 +12,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     ]);
   }
 
-  // Customer-level redaction and data requests are deliberately routed and
-  // HMAC-verified now; personal-data workflows will be completed with the
-  // submission retention policy in the submission phase.
+  // Submission values are anonymous in the current data model and are not
+  // linked to Shopify customer IDs or customer accounts. Therefore customer
+  // data requests/redactions cannot be matched safely without deleting other
+  // customers' submissions. The topics remain HMAC-verified and routed; a
+  // customer identity/retention policy must be implemented before claiming
+  // customer-level GDPR processing is complete.
   return new Response(null, { status: 200 });
 };

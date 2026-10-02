@@ -1,6 +1,6 @@
 ﻿# Shopify Form Builder
 
-Production foundation for a Shopify public app that will provide a visual form builder for merchants. This repository is based on Shopify's current React Router app template and intentionally stops at Phase 1: architecture, tenant-safe persistence, authentication/webhook wiring, storefront extension contract, and identity tests.
+Production foundation for a Shopify public app that provides a visual form builder, published storefront forms, and a validated submission foundation. This repository is based on Shopify's current React Router app template and uses a Theme App Extension plus Shopify App Proxy for storefront delivery.
 
 ## Stack
 
@@ -73,7 +73,23 @@ configuration.
 
 Included: official Shopify app foundation, PostgreSQL Prisma schema, tenant relationships, form/version/layout/style entities, placement model, submission/file/notification/integration/billing/audit entities, mandatory compliance webhook endpoint, Theme App Extension block contract, admin navigation shell, and identity/isolation tests.
 
-Not included: the visual editor, complete submission handling, email/file processing, analytics, integrations, billing enforcement, or storefront rendering. Those are subsequent phases.
+Phase 2 and Phase 3 add the visual editor, published storefront rendering, and
+validated submission storage. Email/file processing, analytics, integrations,
+and billing enforcement remain deferred.
+
+## Phase 3 storefront and submissions
+
+Published forms are loaded through the Shopify App Proxy path configured in
+`shopify.app.toml` and placed through the Theme App Extension block. The proxy
+resolves only a tenant-matched published version using the immutable
+`Form.publicId`; draft and disabled forms fail safely. Storefront submissions
+are validated server-side, reject unknown fields and oversized payloads, and
+are pinned to the exact published `FormVersion` used for validation.
+
+The admin `/app/submissions` page is tenant-scoped and paginated. Values are
+rendered as escaped text, never trusted HTML. App Proxy activation, production
+URLs, extension deployment, compliance subscriptions, and Partner Dashboard
+configuration require Shopify Partner Dashboard verification.
 
 See [`docs/architecture.md`](docs/architecture.md) for boundaries and decisions.
 

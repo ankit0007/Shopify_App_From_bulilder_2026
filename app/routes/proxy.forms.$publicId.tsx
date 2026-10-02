@@ -50,7 +50,8 @@ export async function action({ request, params }: ActionFunctionArgs) {
     const shopId = await resolveShopId(session.shop);
     if (!shopId) return jsonError("Form not found.", 404);
     const contentLength = Number(request.headers.get("content-length") ?? 0);
-    if (contentLength > 70 * 1024) return jsonError("Submission is too large.", 413);
+    if (contentLength > 70 * 1024)
+      return jsonError("Submission is too large.", 413);
     const body = await request.json();
     const result = await createSubmission(db, {
       shopId,
@@ -61,7 +62,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
     if (!result.ok) {
       return jsonError(
         "Please correct the highlighted fields.",
-        result.error ? 404 : 422,
+        "error" in result ? 404 : 422,
         "issues" in result ? result.issues : undefined,
       );
     }
