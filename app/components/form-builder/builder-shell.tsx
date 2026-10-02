@@ -18,6 +18,7 @@ import {
   type BuilderField,
   type FormBuilderConfig,
 } from "../../domain/forms/builder-schema";
+import type { FormLifecycleState } from "../../domain/forms/builder-service.server";
 import {
   FIELD_REGISTRY,
   type BuilderFieldType,
@@ -85,7 +86,14 @@ export function BuilderShell({
   initialConfig,
   shortcode,
 }: {
-  form: { id: string; publicId: string; name: string; status: string };
+  form: {
+    id: string;
+    publicId: string;
+    name: string;
+    status: "DRAFT" | "PUBLISHED" | "DISABLED";
+    lifecycleState: FormLifecycleState;
+    hasPendingDraft: boolean;
+  };
   initialConfig: FormBuilderConfig;
   shortcode: string;
 }) {
@@ -103,6 +111,8 @@ export function BuilderShell({
   const [previewMode, setPreviewMode] = useState<PreviewMode>("desktop");
   const [activeType, setActiveType] = useState<BuilderFieldType | null>(null);
   const [dirty, setDirty] = useState(false);
+  const hasPendingDraft = form.hasPendingDraft;
+  const lifecycleState = form.lifecycleState;
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, {
@@ -187,6 +197,14 @@ export function BuilderShell({
     if (selectedFieldId === id) setSelectedFieldId(null);
   };
 
+  const lifecycleLabel: Record<FormLifecycleState, string> = {
+    DRAFT: "Draft",
+    PUBLISHED: "Published",
+    PUBLISHED_WITH_DRAFT: "Published · draft changes",
+    DISABLED: "Disabled",
+    DISABLED_WITH_DRAFT: "Disabled · draft changes",
+  };
+
   return (
     <DndContext
       sensors={sensors}
@@ -216,8 +234,19 @@ export function BuilderShell({
                 aria-label="Form name"
               />
             </div>
-            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600">
-              {form.status}
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-semibold tracking-wide ${
+                lifecycleState === "PUBLISHED"
+                  ? "bg-emerald-50 text-emerald-700"
+                  : lifecycleState === "PUBLISHED_WITH_DRAFT"
+                    ? "bg-blue-50 text-blue-700"
+                    : lifecycleState === "DISABLED" ||
+                        lifecycleState === "DISABLED_WITH_DRAFT"
+                      ? "bg-slate-100 text-slate-600"
+                      : "bg-amber-50 text-amber-700"
+              }`}
+            >
+              {lifecycleLabel[lifecycleState]}
             </span>
             <div className="flex items-center gap-2">
               <span
@@ -236,13 +265,29 @@ export function BuilderShell({
               <button
                 type="button"
                 onClick={() =>
-                  save(form.status === "PUBLISHED" ? "disable" : "publish")
+                  save(
+                    hasPendingDraft || form.status !== "PUBLISHED"
+                      ? "publish"
+                      : "disable",
+                  )
                 }
                 disabled={isSaving}
                 className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"
               >
-                {form.status === "PUBLISHED" ? "Disable" : "Publish"}
+                {hasPendingDraft || form.status !== "PUBLISHED"
+                  ? "Publish"
+                  : "Disable"}
               </button>
+              {hasPendingDraft && form.status === "PUBLISHED" && (
+                <button
+                  type="button"
+                  onClick={() => save("disable")}
+                  disabled={isSaving}
+                  className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Disable
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => save("duplicate")}

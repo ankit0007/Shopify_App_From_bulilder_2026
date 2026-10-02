@@ -37,6 +37,34 @@ const DB_TYPE_TO_FIELD = Object.fromEntries(
 const asJson = (value: unknown): Prisma.InputJsonValue =>
   JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 
+export type FormLifecycleState =
+  | "DRAFT"
+  | "PUBLISHED"
+  | "PUBLISHED_WITH_DRAFT"
+  | "DISABLED"
+  | "DISABLED_WITH_DRAFT";
+
+export function getFormLifecycleState(
+  form: {
+    status: "DRAFT" | "PUBLISHED" | "DISABLED";
+    publishedVersion: number | null;
+  },
+  latestVersion: { version: number; isPublished: boolean } | null,
+): FormLifecycleState {
+  const hasPendingDraft = Boolean(
+    latestVersion &&
+    !latestVersion.isPublished &&
+    form.publishedVersion !== null &&
+    latestVersion.version > form.publishedVersion,
+  );
+
+  if (form.status === "DRAFT") return "DRAFT";
+  if (form.status === "DISABLED") {
+    return hasPendingDraft ? "DISABLED_WITH_DRAFT" : "DISABLED";
+  }
+  return hasPendingDraft ? "PUBLISHED_WITH_DRAFT" : "PUBLISHED";
+}
+
 async function serializableTransaction<T>(
   db: PrismaClient,
   callback: (tx: Prisma.TransactionClient) => Promise<T>,
@@ -184,6 +212,10 @@ export async function loadBuilderForm(
     version,
     config: dataToConfig(version),
     shortcode: createFormShortcode(form.publicId),
+    hasPendingDraft:
+      getFormLifecycleState(form, version) === "PUBLISHED_WITH_DRAFT" ||
+      getFormLifecycleState(form, version) === "DISABLED_WITH_DRAFT",
+    lifecycleState: getFormLifecycleState(form, version),
   };
 }
 

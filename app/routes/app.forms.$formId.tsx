@@ -34,6 +34,8 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
       publicId: loaded.form.publicId,
       name: loaded.form.name,
       status: loaded.form.status,
+      lifecycleState: loaded.lifecycleState,
+      hasPendingDraft: loaded.hasPendingDraft,
     },
     config: loaded.config,
     shortcode: loaded.shortcode,
@@ -175,6 +177,7 @@ export default function FormBuilderRoute() {
   const data = useLoaderData<typeof loader>();
   return (
     <BuilderShell
+      key={`${data.form.lifecycleState}:${data.form.hasPendingDraft}`}
       form={data.form}
       initialConfig={data.config}
       shortcode={data.shortcode}
